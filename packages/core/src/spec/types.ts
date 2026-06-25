@@ -157,8 +157,9 @@ export interface UISpec {
   meta?: { id: string; version: number };
   theme?: ThemeChoice;
   layout?: LayoutConfig;
-  /** Sets both balance + bet currency at once. */
-  currency?: CurrencySpec;
+  /** Balance + bet currency: a full spec, or a code string (e.g. `'JPY'`, `'XGC'`)
+   *  auto-resolved (decimals, social coins) via the built-in currency table. */
+  currency?: CurrencySpec | string;
   betLadder?: { levels: number[]; index?: number };
   /**
    * Autoplay count choices + tap behavior (`'options'` drawer or `'infinite'`), plus
@@ -203,6 +204,11 @@ export interface UISpec {
   /** Put the compliance readouts (net · RTP · session) in a thin status bar pinned
    *  to the `'top'` or `'bottom'` edge instead of at screen corners. */
   statusBar?: 'top' | 'bottom';
+  /** Game name + version — shown in the menu footer (support / certification). */
+  game?: { name?: string; version?: string };
+  /** Reality-check reminder (RTS 13): every N minutes pause + show an acknowledge
+   *  modal. `title`/`message` are literal-or-key. */
+  realityCheck?: { everyMinutes: number; title?: string; message?: string };
 }
 
 /** The result of building a PanelSpec: the panel + every leaf control, in render order. */

@@ -92,7 +92,7 @@ export function validateSpec(spec: UISpec): { ok: boolean; issues: SpecIssue[] }
       }
     }
 
-    if (spec.currency && typeof spec.currency.decimals === 'number') {
+    if (spec.currency && typeof spec.currency === 'object' && typeof spec.currency.decimals === 'number') {
       const d = spec.currency.decimals;
       if (d < 0 || d > 8) add('warn', 'currency.decimals', 'decimals-range', `decimals ${d} clamped to 0..8`);
     }
@@ -113,6 +113,9 @@ export function validateSpec(spec: UISpec): { ok: boolean; issues: SpecIssue[] }
     }
     if (spec.statusBar != null && spec.statusBar !== 'top' && spec.statusBar !== 'bottom') {
       add('error', 'statusBar', 'bad-statusbar', `statusBar must be 'top' or 'bottom', got "${String(spec.statusBar)}"`);
+    }
+    if (spec.realityCheck != null && !(typeof spec.realityCheck.everyMinutes === 'number' && spec.realityCheck.everyMinutes > 0)) {
+      add('error', 'realityCheck.everyMinutes', 'bad-interval', 'realityCheck.everyMinutes must be a number > 0');
     }
 
     if (spec.controls) {

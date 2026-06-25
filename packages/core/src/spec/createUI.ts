@@ -11,6 +11,7 @@ import { DictionaryTranslator } from '../i18n/translator';
 import { validateSpec } from './validateSpec';
 import { installResponsive } from './responsive';
 import { applyJurisdiction } from './jurisdiction';
+import { resolveCurrency } from '../format/currency';
 import type { UISpec, HostHooks, TurboSpec } from './types';
 import type { OpenUIEvents } from '../types';
 
@@ -50,12 +51,14 @@ export function createUI(spec: UISpec = {}, hooks: HostHooks = {}): OpenUI {
   const ui = new OpenUI({ theme, layout: spec.layout, translator });
 
   if (spec.currency) {
-    ui.balance.setCurrency(spec.currency);
-    ui.bet.setCurrency(spec.currency);
-    ui.netPosition.setCurrency(spec.currency);
+    const cur = typeof spec.currency === 'string' ? resolveCurrency(spec.currency) : spec.currency;
+    ui.balance.setCurrency(cur);
+    ui.bet.setCurrency(cur);
+    ui.netPosition.setCurrency(cur);
   }
 
   if (typeof spec.rtp === 'number') ui.rtp.set(spec.rtp);
+  if (spec.game) ui.gameInfo = { name: spec.game.name, version: spec.game.version };
 
   if (spec.betLadder?.levels?.length) {
     ui.betStepper.setLevels(spec.betLadder.levels, spec.betLadder.index ?? 0);

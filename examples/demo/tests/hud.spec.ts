@@ -78,6 +78,39 @@ test.describe('open-ui HUD — behavior via __OPENUI__', () => {
     expect(locked.spin).toBe(false);
     expect(locked.betPlus).toBe(false);
   });
+
+  test('intro=slide-in settles to an interactive, on-screen HUD', async ({ page }) => {
+    await page.goto('/?bare=1&intro=slide-in');
+    // wait for the slide-in to FINISH (controlsReady true) — proves it doesn't stall
+    await page.waitForFunction(
+      () => {
+        const api = (window as unknown as { __OPENUI__?: { snapshot(): unknown[]; controlsReady?(): boolean } }).__OPENUI__;
+        return !!api && api.snapshot().length > 10 && api.controlsReady?.() === true;
+      },
+      undefined,
+      { timeout: 25_000 },
+    );
+    const r = await page.evaluate(() => {
+      const api = (window as unknown as { __OPENUI__: { isInteractable(id: string): boolean; bounds(id: string): { y: number } } }).__OPENUI__;
+      const ui = (window as unknown as { ui: { screen: { get(): { height: number } }; locked: { get(): boolean } } }).ui;
+      return { interactable: api.isInteractable('spin'), onScreen: api.bounds('spin').y < ui.screen.get().height, locked: ui.locked.get() };
+    });
+    expect(r.interactable).toBe(true);
+    expect(r.onScreen).toBe(true);
+    expect(r.locked).toBe(false);
+  });
+
+  test('intro=hidden starts off-screen + locked', async ({ page }) => {
+    await page.goto('/?bare=1&intro=hidden');
+    await waitForHud(page);
+    const r = await page.evaluate(() => {
+      const api = (window as unknown as { __OPENUI__: { bounds(id: string): { y: number } } }).__OPENUI__;
+      const ui = (window as unknown as { ui: { screen: { get(): { height: number } }; locked: { get(): boolean } } }).ui;
+      return { offScreen: api.bounds('spin').y >= ui.screen.get().height, locked: ui.locked.get() };
+    });
+    expect(r.offScreen).toBe(true);
+    expect(r.locked).toBe(true);
+  });
 });
 
 // The interactive surfaces (drawer, menu, modal) — captured once, on desktop.

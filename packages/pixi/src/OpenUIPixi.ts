@@ -1,4 +1,4 @@
-import { Container, type Application, type Texture } from 'pixi.js';
+import { Container, Graphics, Text, type Application, type Texture, type Ticker } from 'pixi.js';
 import {
   type OpenUI,
   type BlockSpec,
@@ -69,6 +69,17 @@ export interface OpenUIPixiOptions {
    * shows when its jurisdiction `display*` flag is set.
    */
   statusBar?: StatusBarSide;
+  /**
+   * How the interactive HUD appears on mount: `'shown'` (default), `'hidden'` (off
+   * screen + non-interactive; reveal later with `showControls()`), or `'slide-in'`
+   * (start hidden, then slide in from the edges).
+   */
+  intro?: 'shown' | 'hidden' | 'slide-in';
+}
+
+/** Smooth S-curve for the show/hide slide (translation only — no scaling). */
+function easeInOutCubic(p: number): number {
+  return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
 }
 
 /**
@@ -83,6 +94,18 @@ export class OpenUIPixi {
   private readonly overlays: Array<{ applyLayout(s: ScreenState): void; dispose(): void }> = [];
   private readonly disposers: Array<() => void> = [];
   private _eventLog?: EventLog;
+  /** Show/hide slide: each interactive view slides toward its anchored edge (bottom
+   *  controls down, top up — behind the status-bar plaque). Views stay direct children
+   *  of `root` (introspection bounds unchanged); only their y moves, and the
+   *  ref-counted input lock makes them non-interactive while moving/hidden. */
+  private slideProg = 0; // 0 = shown · 1 = fully hidden (set per `intro` on mount)
+  private slideTarget = 1;
+  private slideHeld = false;
+  private lastScreenH = 1080;
+  private appTicker?: Ticker;
+  private slideTickFn?: (t: Ticker) => void;
+  private readonly slideBaseY = new Map<ControlView, number>();
+  private readonly slideSign = new Map<ControlView, number>();
 
   constructor(
     private readonly ui: OpenUI,
@@ -96,6 +119,7 @@ export class OpenUIPixi {
 
   mount(app: Application): void {
     const { stage, renderer, ticker } = app;
+    this.appTicker = ticker;
     stage.sortableChildren = true;
     this.root.zIndex = 10_000;
     this.root.sortableChildren = true;
@@ -211,6 +235,28 @@ export class OpenUIPixi {
       this.disposers.push(() => document.removeEventListener('fullscreenchange', onFsChange));
     }
 
+    // Keyboard spin (Space / Enter), gated by jurisdiction (`disabledSpacebar`) + the
+    // lock. RTS 14D: one spin per press — no auto-repeat by holding the key.
+    if (typeof window !== 'undefined') {
+      let keyHeld = false;
+      const onKeyDown = (e: KeyboardEvent): void => {
+        if (e.code !== 'Space' && e.key !== 'Enter') return;
+        if (!this.ui.spin.allowKeyboard.get() || e.repeat || keyHeld) return;
+        keyHeld = true;
+        e.preventDefault();
+        if (this.ui.spin.interactable) this.ui.spin.activate();
+      };
+      const onKeyUp = (e: KeyboardEvent): void => {
+        if (e.code === 'Space' || e.key === 'Enter') keyHeld = false;
+      };
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+      this.disposers.push(() => {
+        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keyup', onKeyUp);
+      });
+    }
+
     // The menu is a full-screen overlay that manages its OWN open/closed visibility
     // (driven by the panel state) — so it's an overlay, not a force-visible view.
     if (menuView) {
@@ -226,7 +272,7 @@ export class OpenUIPixi {
     }
 
     // The menu-style notice / error modal (owns its open/closed visibility → overlay).
-    const dialog = new DialogView(this.ui.noticePanel, this.ui.noticeBlocks, this.ui, ticker, { controlSkins: this.opts.controlSkins });
+    const dialog = new DialogView(this.ui.noticePanel, this.ui.noticeBlocks, this.ui.noticeActions, this.ui, ticker, { controlSkins: this.opts.controlSkins });
     this.root.addChild(dialog);
     this.overlays.push(dialog);
 
@@ -236,6 +282,36 @@ export class OpenUIPixi {
       this.root.addChild(bar);
       this.overlays.push(bar);
     }
+
+    // REPLAY badge (Stake replay mode) — a pill shown while `ui.replay` is true.
+    const replayBadge = new Container();
+    const replayBg = new Graphics();
+    const replayText = new Text({ text: this.ui.t('openui.replay').toUpperCase(), style: { fontFamily: this.ui.theme.type.family, fontSize: 16, fontWeight: '800', fill: 0xffffff, letterSpacing: 2 } });
+    replayText.anchor.set(0.5);
+    replayBadge.addChild(replayBg, replayText);
+    replayBadge.zIndex = 310;
+    replayBadge.visible = this.ui.replay.get();
+    this.root.addChild(replayBadge);
+    this.overlays.push({
+      applyLayout: (s) => {
+        const w = replayText.width + 36;
+        const h = 32;
+        replayBg.clear().roundRect(-w / 2, -h / 2, w, h, h / 2).fill({ color: 0x0c0d10 }).stroke({ width: 2, color: 0xffffff });
+        const top = statusBarSide === 'top' ? StatusBarView.heightFor(s) + 28 : 40;
+        replayBadge.position.set(s.width / 2, top);
+      },
+      dispose: () => {
+        if (!replayBadge.destroyed) replayBadge.destroy({ children: true });
+      },
+    });
+    this.disposers.push(
+      this.ui.replay.subscribe((v) => {
+        replayBadge.visible = v;
+      }),
+      this.ui.locale.subscribe(() => {
+        if (!replayBadge.destroyed) replayText.text = this.ui.t('openui.replay').toUpperCase();
+      }),
+    );
 
     // the settings button toggles ☰ ↔ ✕ with the popover's open state
     if (ic.settingsIdle && ic.settingsActive) {
@@ -260,14 +336,21 @@ export class OpenUIPixi {
       // A status bar insets the HUD by its height on that edge — controls anchored to
       // the same edge shift away, as if the bar added a margin to them.
       const barH = statusBarSide ? StatusBarView.heightFor(screen) : 0;
+      this.slideBaseY.clear();
+      this.slideSign.clear();
       for (const v of this.views) {
         v.applyLayout(screen);
+        const anchor = this.ui.control(idByView.get(v) ?? '')?.layout.anchor ?? 'bottom-center';
         if (barH) {
-          const anchor = this.ui.control(idByView.get(v) ?? '')?.layout.anchor ?? '';
           if (statusBarSide === 'top' && anchor.startsWith('top')) v.y += barH;
           else if (statusBarSide === 'bottom' && anchor.startsWith('bottom')) v.y -= barH;
         }
+        // record the resting y + slide direction (top controls up, the rest down)
+        this.slideBaseY.set(v, v.y);
+        this.slideSign.set(v, anchor.startsWith('top') ? -1 : 1);
       }
+      this.lastScreenH = screen.height;
+      this.applySlide();
       for (const o of this.overlays) o.applyLayout(screen);
     };
     const onResize = (): void => {
@@ -278,6 +361,19 @@ export class OpenUIPixi {
     const unsubScreen = this.ui.screen.subscribe(applyLayout);
     onResize();
     applyLayout();
+
+    // Initial HUD visibility (configurable via `intro`): shown / hidden / slide-in.
+    const intro = this.opts.intro ?? 'shown';
+    if (intro === 'shown') {
+      this.slideProg = 0;
+      this.applySlide();
+    } else {
+      this.slideProg = 1; // start off-screen
+      this.applySlide();
+      this.ui.lock(); // non-interactive while hidden
+      this.slideHeld = true;
+      if (intro === 'slide-in') this.setControlsVisible(true); // animate in (unlocks when shown)
+    }
 
     this.disposers.push(() => renderer.off('resize', onResize), unsubScreen);
 
@@ -308,7 +404,65 @@ export class OpenUIPixi {
     });
   }
 
+  /**
+   * Slide the whole interactive HUD in (`true`) or out (`false`): bottom-anchored
+   * controls travel down, top-anchored travel up (behind the status-bar plaque).
+   * Pure translation (no scaling); controls are non-interactive while moving/hidden.
+   */
+  setControlsVisible(visible: boolean): void {
+    const target = visible ? 0 : 1;
+    this.slideTarget = target;
+    // non-interactive while moving/hidden — hold the ref-counted input lock
+    if (!this.slideHeld) {
+      this.ui.lock();
+      this.slideHeld = true;
+    }
+    const settle = (): void => {
+      // fully shown → release the lock; fully hidden → stay locked
+      if (this.slideProg === 0 && this.slideHeld) {
+        this.ui.unlock();
+        this.slideHeld = false;
+      }
+    };
+    if (!this.appTicker) {
+      this.slideProg = target;
+      this.applySlide();
+      settle();
+      return;
+    }
+    // Drive the slide from a wall-clock timestamp (not accumulated ticker deltas), so
+    // it completes in a fixed real-time duration regardless of frame pacing.
+    const from = this.slideProg;
+    const startMs = typeof performance !== 'undefined' ? performance.now() : 0;
+    if (this.slideTickFn) this.appTicker.remove(this.slideTickFn);
+    const tick = (): void => {
+      const nowMs = typeof performance !== 'undefined' ? performance.now() : startMs + 360;
+      const k = Math.min(1, (nowMs - startMs) / 360);
+      this.slideProg = from + (target - from) * k;
+      if (k >= 1) {
+        this.slideProg = target;
+        this.appTicker?.remove(tick);
+        this.slideTickFn = undefined;
+        settle();
+      }
+      this.applySlide();
+    };
+    this.slideTickFn = tick;
+    this.appTicker.add(tick);
+  }
+
+  /** Apply the current slide progress: translate each interactive view toward its
+   *  anchored edge (pure translation — no scaling). */
+  private applySlide(): void {
+    const off = easeInOutCubic(this.slideProg) * this.lastScreenH;
+    for (const [view, baseY] of this.slideBaseY) {
+      view.y = baseY + (this.slideSign.get(view) ?? 1) * off;
+    }
+  }
+
   unmount(): void {
+    if (this.slideTickFn && this.appTicker) this.appTicker.remove(this.slideTickFn);
+    this.slideTickFn = undefined;
     for (const v of this.views) v.dispose();
     this.views.length = 0;
     for (const o of this.overlays) o.dispose();
@@ -332,6 +486,7 @@ export class OpenUIPixi {
       isAnimating: (id: string) => this.ui.control(id)?.inspect().animating ?? false,
       bounds: (id: string) => this.ui.snapshot().find((s) => s.id === id)?.bounds ?? null,
       events: (since: number) => this._eventLog?.since(since) ?? [],
+      controlsReady: () => this.slideProg < 0.001,
     };
   }
 }

@@ -54,8 +54,11 @@ export function applyJurisdiction(ui: OpenUI, jur: JurisdictionConfig | undefine
   if (jur.disabledSuperTurbo && ui.turbo.modeCount > 2) ui.turbo.setModes(['off', 'on']);
   // Slam-stop off → the spin button locks (dims) during the spin; no tap-to-stop.
   if (jur.disabledSlamstop) ui.spin.allowSlamStop.set(false);
-  // Spacebar / hold-to-spin off → each cycle needs a fresh press (no auto-repeat).
-  if (jur.disabledSpacebar) ui.spin.holdToSpin = false;
+  // Spacebar / hold-to-spin off → no keyboard spin + each cycle needs a fresh press.
+  if (jur.disabledSpacebar) {
+    ui.spin.holdToSpin = false;
+    ui.spin.allowKeyboard.set(false);
+  }
 
   // ── "display X" → reveal the mandated readout (jurisdiction owns these) ───────
   if (jur.displayRTP != null) ui.setHidden('rtp', !jur.displayRTP);

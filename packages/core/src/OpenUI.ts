@@ -20,6 +20,14 @@ import {
 import type { ControlSnapshot, OpenUIEvents } from './types';
 import type { UISpec, BlockSpec } from './spec/types';
 import { applyJurisdiction as applyJurisdictionTo, type JurisdictionConfig } from './spec/jurisdiction';
+import {
+  type NoticeAction,
+  type NoticeOptions,
+  type RgsErrorOptions,
+  RGS_ERROR_KEYS,
+  DEFAULT_NOTICE_ACTION,
+  errorBlocks,
+} from './notice';
 import { DictionaryTranslator, type Translator } from './i18n/translator';
 
 export interface OpenUIOptions {
@@ -70,6 +78,12 @@ export class OpenUI {
   readonly social = new Signal<boolean>(false);
   /** Declarative blocks backing the menu-style notice/error modal. */
   readonly noticeBlocks = new Signal<BlockSpec[]>([]);
+  /** Action buttons for the notice/error modal (a single dismiss when empty). */
+  readonly noticeActions = new Signal<NoticeAction[]>([]);
+  /** Replay mode (Stake `replay=true`): the HUD locks + a REPLAY badge shows. */
+  readonly replay = new Signal<boolean>(false);
+  /** Game name + version (shown in the menu footer; for support / certification). */
+  gameInfo: { name?: string; version?: string } = {};
   /** Minimum round duration (ms) from jurisdiction — stored for the GAME to enforce. */
   minimumRoundDuration = 0;
   private sessionNet = 0;
@@ -321,7 +335,11 @@ export class OpenUI {
     if (!Number.isFinite(win) || !Number.isFinite(bet)) return;
     this.sessionNet += win - bet;
     this.netPosition.set(this.sessionNet);
-    if (this.autoplay.isActive) this.autoplay.reportResult(win, bet);
+    if (this.autoplay.isActive) {
+      this.autoplay.reportResult(win, bet);
+      // auto-stop autoplay when the next round is no longer affordable (RG)
+      if (this.autoplay.isActive && this.balance.get() < this.bet.get()) this.autoplay.stop();
+    }
   }
 
   /** Reset the running session net + timer (e.g. on a fresh session). */
@@ -331,14 +349,43 @@ export class OpenUI {
     this.sessionTimer.reset();
   }
 
-  /** Show the menu-style notice/error modal built from declarative blocks. */
-  showNotice(blocks: BlockSpec[]): void {
+  /** Show the menu-style notice modal: declarative blocks + optional action buttons.
+   *  Every string (block text + button labels) runs through `ui.t`, so pass exact
+   *  literals OR your own i18n keys. Omit `actions` → a single dismiss button. */
+  showNotice(blocks: BlockSpec[], actions?: NoticeAction[]): void {
     this.noticeBlocks.set(Array.isArray(blocks) ? blocks : []);
+    this.noticeActions.set(actions && actions.length ? actions : [DEFAULT_NOTICE_ACTION]);
     this.noticePanel.openPanel();
   }
-  /** Close the notice/error modal. */
+
+  /** Show a simple error/notice: a title + a tone-coloured message. `message` and
+   *  `opts.title` are literal-or-key (localized via `ui.t`); `opts.actions` adds
+   *  custom buttons (e.g. a "Reload"). */
+  showError(message: string, opts: NoticeOptions = {}): void {
+    this.showNotice(errorBlocks(message, opts.title ?? 'openui.error', opts.tone ?? 'warning'), opts.actions);
+  }
+
+  /** Show the default (localizable, overridable) message for an RGS status code.
+   *  Override the exact text per call via `opts.title` / `opts.message`. Stops an
+   *  active autoplay by default (`opts.stopAutoplay = false` to keep it). */
+  showRgsError(code: string, opts: RgsErrorOptions = {}): void {
+    const def = RGS_ERROR_KEYS[code] ?? RGS_ERROR_KEYS.ERR_GEN!;
+    if (opts.stopAutoplay !== false && this.autoplay.isActive) this.autoplay.stop();
+    this.showError(opts.message ?? def.message, { title: opts.title ?? def.title, tone: opts.tone ?? 'warning', actions: opts.actions });
+  }
+
+  /** Close the notice / error modal. */
   hideNotice(): void {
     this.noticePanel.closePanel();
+  }
+
+  /** Enter/leave replay mode (Stake `replay=true`) — locks the HUD so no real bet is
+   *  placed; the renderer shows a REPLAY badge while it's on. */
+  setReplay(on: boolean): void {
+    if (on === this.replay.get()) return;
+    this.replay.set(on);
+    if (on) this.lock();
+    else this.unlock();
   }
 
   /** Apply a Stake Engine `jurisdiction` config to the live HUD (whole switchboard). */

@@ -38,6 +38,13 @@ export class SpinControl extends Control {
    */
   readonly allowSlamStop = new Signal<boolean>(true);
 
+  /**
+   * Whether the keyboard (Space / Enter) can trigger a spin. Stake's
+   * `disabledSpacebar` sets this false (and turns off hold-to-spin). The renderer
+   * reads it; RTS 14D requires a fresh press per cycle (no auto-repeat).
+   */
+  readonly allowKeyboard = new Signal<boolean>(true);
+
   constructor(
     opts: { id?: string; layout: LayoutSpec; holdToSpin?: boolean },
     private readonly bus: EventBus<OpenUIEvents>,

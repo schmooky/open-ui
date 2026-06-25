@@ -39,6 +39,11 @@ const cfg = {
   blockBuy: q.get('blockbuy') === '1',
   // status bar edge for the compliance readouts: ?statusbar=top|bottom|off (default top)
   statusBar: (q.get('statusbar') === 'bottom' ? 'bottom' : q.get('statusbar') === 'off' ? undefined : 'top') as 'top' | 'bottom' | undefined,
+  // reality-check interval in minutes (?reality=0.2 ≈ 12s, for demoing); replay mode
+  reality: Number(q.get('reality')) || 0,
+  replay: q.get('replay') === '1',
+  // initial HUD visibility: ?intro=shown|hidden|slide-in (default shown)
+  intro: (['hidden', 'slide-in'].includes(q.get('intro') ?? '') ? q.get('intro') : 'shown') as 'shown' | 'hidden' | 'slide-in',
 };
 
 /** Parse `?juris=rtp,net,timer,noturbo,noslam,…` into a Stake Engine JurisdictionConfig
@@ -78,6 +83,8 @@ function buildSpec(): UISpec {
     rtp: 96,
     jurisdiction: JURISDICTION,
     statusBar: cfg.statusBar,
+    game: { name: 'Scrolls of Fate', version: '1.0.0' },
+    realityCheck: cfg.reality > 0 ? { everyMinutes: cfg.reality } : undefined,
     // Desktop button layout CLONED from the reference UI design (Dev.svg): a bottom
     // bar — balance · play · SPIN · turbo · bet (+ steppers to its right) — with the
     // bonus on the right rail and the ☰ menu on the lower left. The design has no
@@ -185,6 +192,8 @@ async function main(): Promise<void> {
   const hud = mountHud(app, buildSpec(), {
     expose: true,
     menu: false, // the one biased menu design is the HTML one, mounted below
+    intro: cfg.intro, // ?intro=shown|hidden|slide-in
+
     spinSkin: () => svgSpinSkin({ default: spinDefault, auto: spinAuto }),
     icons: {
       // menu (☰), fullscreen + mute render as b&w "mono" glyph buttons like turbo —
@@ -222,6 +231,7 @@ async function main(): Promise<void> {
 
   const start = CURRENCIES[cfg.currency]!;
   ui.balance.set(start.balance);
+  if (cfg.replay) hud.setReplay(true); // ?replay=1 → REPLAY badge + locked HUD
 
   // ---- talk to it from the outside: events out, façade in ----
   const round = (x: number, d: number): number => {
@@ -247,7 +257,7 @@ async function main(): Promise<void> {
   ui.on('spinRequested', async () => {
     // Stake Engine error UX: block + surface insufficient funds in a menu-style modal.
     if (ui.balance.get() < ui.bet.get()) {
-      hud.showError("You don't have enough balance to place this bet.", { title: 'Insufficient funds' });
+      hud.showRgsError('ERR_IPB'); // default localized message (override per-call if you like)
       return;
     }
     await playSpin();
@@ -287,6 +297,7 @@ async function main(): Promise<void> {
   });
 
   // ---- a few keyboard conveniences (the demo, not the library) ----
+  let controlsShown = true;
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === 'a') ui.spin.current === 'auto' ? ui.spin.idle() : ui.spin.auto();
@@ -296,7 +307,18 @@ async function main(): Promise<void> {
     else if (k === '2') ui.turbo.setModes(['off', 'on']);
     else if (k === '3') ui.turbo.setModes(['off', 'turbo', 'super']);
     else if (k === 'm') ui.toggleMute();
-    else if (k === 'e') hud.showError('A consistent internet connection is required. Reload to finish any uncompleted bets.', { title: 'Connection lost' });
+    else if (k === 'e')
+      hud.showError('A consistent internet connection is required. Reload to finish any uncompleted bets.', {
+        title: 'Connection lost',
+        actions: [
+          { label: 'openui.reload', variant: 'primary', onSelect: () => location.reload() },
+          { label: 'openui.ok', variant: 'secondary' },
+        ],
+      });
+    else if (k === 'h') {
+      controlsShown = !controlsShown;
+      hud.setControlsVisible(controlsShown); // slide the whole interactive HUD in/out
+    }
   });
 
   (window as unknown as Record<string, unknown>).ui = ui;
