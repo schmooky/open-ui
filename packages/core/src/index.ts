@@ -33,4 +33,7 @@ export * from './spec/defaultHudSpec';
 export * from './EventLog';
 export * from './i18n/translator';
 export * from './format/currency';
+export * from './notice';
+export * from './bet';
+export * from './win';
 export * from './OpenUI';

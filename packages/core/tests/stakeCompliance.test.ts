@@ -5,6 +5,8 @@ import { ReadoutControl } from '../src/controls/ReadoutControl';
 import { SpinControl } from '../src/controls/SpinControl';
 import { EventBus } from '../src/events';
 import { resolveCurrency, formatAmount, isSocialCurrency } from '../src/format/currency';
+import { buildBetLadder, clampBet } from '../src/bet';
+import { winTier } from '../src/win';
 import type { OpenUIEvents } from '../src/types';
 
 const layout = { anchor: 'center' } as const;
@@ -181,5 +183,95 @@ describe('SpinControl slam-stop guard', () => {
     expect(spin.interactable).toBe(false);
     spin.activate();
     expect(skip).toHaveBeenCalledTimes(1); // suppressed
+  });
+});
+
+describe('currency shorthand + bet ladder', () => {
+  it('a string currency code resolves decimals for balance/bet/net', () => {
+    const ui = createUI({ currency: 'JPY' });
+    expect(ui.balance.currency.get().decimals).toBe(0);
+    expect(ui.bet.currency.get().decimals).toBe(0);
+    expect(createUI({ currency: 'XGC' }).balance.currency.get().code).toBe('GC');
+  });
+  it('buildBetLadder from betLevels (minor units) → major + default index', () => {
+    const { levels, index } = buildBetLadder({ betLevels: [100000, 1000000, 5000000], defaultBetLevel: 1000000 });
+    expect(levels).toEqual([0.1, 1, 5]);
+    expect(index).toBe(1);
+  });
+  it('buildBetLadder from min/max/step', () => {
+    expect(buildBetLadder({ minBet: 1000000, maxBet: 3000000, stepBet: 1000000 }).levels).toEqual([1, 2, 3]);
+  });
+  it('clampBet snaps to step within min/max', () => {
+    const cfg = { minBet: 1000000, maxBet: 5000000, stepBet: 1000000 };
+    expect(clampBet(1.2, cfg)).toBe(1);
+    expect(clampBet(99, cfg)).toBe(5);
+  });
+});
+
+describe('winTier (RTS 14F — never celebrate a return ≤ stake)', () => {
+  it("returns 'none' when win <= stake", () => {
+    expect(winTier(1, 1)).toBe('none');
+    expect(winTier(0, 1)).toBe('none');
+    expect(winTier(0.5, 1)).toBe('none');
+  });
+  it('escalates by multiplier above the stake', () => {
+    expect(winTier(5, 1)).toBe('win');
+    expect(winTier(12, 1)).toBe('big');
+    expect(winTier(60, 1)).toBe('mega');
+    expect(winTier(150, 1)).toBe('epic');
+  });
+});
+
+describe('notice / error modal', () => {
+  it('showError opens a notice with a single default dismiss action', () => {
+    const ui = createUI({});
+    ui.showError('Boom');
+    expect(ui.noticePanel.isOpen).toBe(true);
+    expect(ui.noticeBlocks.get().some((b) => b.kind === 'callout' && b.text === 'Boom')).toBe(true);
+    expect(ui.noticeActions.get().length).toBe(1);
+  });
+  it('showNotice accepts custom action buttons (host callbacks)', () => {
+    const ui = createUI({});
+    const fn = vi.fn();
+    ui.showNotice([{ kind: 'text', id: 't', text: 'hi' }], [{ label: 'Reload', onSelect: fn }]);
+    expect(ui.noticeActions.get()[0]!.label).toBe('Reload');
+  });
+  it('showRgsError maps a code to a default (key) message + stops autoplay', () => {
+    const ui = createUI({});
+    ui.autoplay.begin(10);
+    ui.showRgsError('ERR_IPB');
+    expect(ui.autoplay.isActive).toBe(false);
+    expect(ui.noticeBlocks.get().some((b) => b.kind === 'callout' && b.text === 'openui.err.insufficient.message')).toBe(true);
+  });
+  it('showRgsError lets the host override the EXACT text', () => {
+    const ui = createUI({});
+    ui.showRgsError('ERR_IPB', { title: 'Out of cash', message: 'Top up to keep playing' });
+    expect(ui.noticeBlocks.get().some((b) => b.kind === 'heading' && b.text === 'Out of cash')).toBe(true);
+    expect(ui.noticeBlocks.get().some((b) => b.kind === 'callout' && b.text === 'Top up to keep playing')).toBe(true);
+  });
+});
+
+describe('replay + keyboard + autoplay auto-stop', () => {
+  it('setReplay locks the HUD', () => {
+    const ui = createUI({});
+    ui.setReplay(true);
+    expect(ui.replay.get()).toBe(true);
+    expect(ui.locked.get()).toBe(true);
+    ui.setReplay(false);
+    expect(ui.locked.get()).toBe(false);
+  });
+  it('disabledSpacebar turns off keyboard spin + hold-to-spin', () => {
+    const ui = createUI({ spin: { press: 'hold-to-spin' }, jurisdiction: { disabledSpacebar: true } });
+    expect(ui.spin.allowKeyboard.get()).toBe(false);
+    expect(ui.spin.holdToSpin).toBe(false);
+  });
+  it("reportRound auto-stops autoplay when the balance can't cover the next bet", () => {
+    const ui = createUI({});
+    ui.bet.set(1);
+    ui.balance.set(0.5);
+    ui.autoplay.begin(10);
+    expect(ui.autoplay.isActive).toBe(true);
+    ui.reportRound(0, 1);
+    expect(ui.autoplay.isActive).toBe(false);
   });
 });

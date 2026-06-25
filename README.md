@@ -81,9 +81,18 @@ honor the platform's per-player **`jurisdiction`** switchboard (returned by
 ```ts
 hud.applyJurisdiction(jurisdiction); // the 12-flag config, verbatim from the RGS
 
-hud.reportRound(win, bet); // feeds the net-position readout + autoplay loss/win limits
-hud.setRtp(96);            // the RTP readout
-hud.showError('Session expired. Reload to continue.'); // a themed, menu-style modal
+hud.reportRound(win, bet);  // net-position readout + autoplay loss/win limits + auto-stop
+hud.setRtp(96);             // the RTP readout
+hud.setReplay(true);        // Stake replay mode → REPLAY badge + locked HUD
+
+// Errors / notices are menu-style + themed. Every string is EITHER exact text you
+// pass OR an i18n key you control — use the built-in defaults, localize them, or
+// override per call. Action buttons take your own callbacks:
+hud.showRgsError('ERR_IPB');                  // one-call, localized default message
+hud.showError('Session expired.', {           // …or your exact text + custom buttons
+  title: 'Heads up',
+  actions: [{ label: 'Reload', variant: 'primary', onSelect: () => location.reload() }],
+});
 ```
 
 | Concern | open-ui |
@@ -93,8 +102,10 @@ hud.showError('Session expired. Reload to continue.'); // a themed, menu-style m
 | `socialCasino` · social coins (XGC→GC, XSC→SC) · zero-decimal currencies (JPY…) | currency table + `resolveCurrency` |
 | Autoplay **loss-limit** + **single-win stop** + stop-anytime | in the picker; enforced via `reportRound` |
 | Slam-stop disabled | the spin button dims + locks during the spin |
-| Insufficient funds / session expired / maintenance / disconnect | `hud.showNotice` / `showError` |
+| Insufficient funds / session expired / gambling-limit / maintenance / location | `hud.showRgsError(code)` — localizable defaults, per-call overridable, custom action buttons |
 | Master mute + fullscreen | black-and-white icon controls at the screen edge |
+| Keyboard spin (Space/Enter, gated by `disabledSpacebar`) · replay mode · reality-check (RTS 13) | built in — `realityCheck`, `setReplay`, keyboard handler |
+| Bet ladder + stake from RGS limits · `currency: 'JPY'` shorthand · never celebrate a win ≤ stake | `buildBetLadder` / `clampBet` / `resolveCurrency` / `winTier` helpers |
 
 Put the readouts in a thin strip with **`statusBar: 'top' | 'bottom'`** (otherwise
 they sit at screen corners). `minimumRoundDuration` is surfaced as

@@ -1,4 +1,4 @@
-import { Container, type Application, type Texture } from 'pixi.js';
+import { Container, Graphics, Text, type Application, type Texture } from 'pixi.js';
 import {
   type OpenUI,
   type BlockSpec,
@@ -211,6 +211,28 @@ export class OpenUIPixi {
       this.disposers.push(() => document.removeEventListener('fullscreenchange', onFsChange));
     }
 
+    // Keyboard spin (Space / Enter), gated by jurisdiction (`disabledSpacebar`) + the
+    // lock. RTS 14D: one spin per press — no auto-repeat by holding the key.
+    if (typeof window !== 'undefined') {
+      let keyHeld = false;
+      const onKeyDown = (e: KeyboardEvent): void => {
+        if (e.code !== 'Space' && e.key !== 'Enter') return;
+        if (!this.ui.spin.allowKeyboard.get() || e.repeat || keyHeld) return;
+        keyHeld = true;
+        e.preventDefault();
+        if (this.ui.spin.interactable) this.ui.spin.activate();
+      };
+      const onKeyUp = (e: KeyboardEvent): void => {
+        if (e.code === 'Space' || e.key === 'Enter') keyHeld = false;
+      };
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+      this.disposers.push(() => {
+        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keyup', onKeyUp);
+      });
+    }
+
     // The menu is a full-screen overlay that manages its OWN open/closed visibility
     // (driven by the panel state) — so it's an overlay, not a force-visible view.
     if (menuView) {
@@ -226,7 +248,7 @@ export class OpenUIPixi {
     }
 
     // The menu-style notice / error modal (owns its open/closed visibility → overlay).
-    const dialog = new DialogView(this.ui.noticePanel, this.ui.noticeBlocks, this.ui, ticker, { controlSkins: this.opts.controlSkins });
+    const dialog = new DialogView(this.ui.noticePanel, this.ui.noticeBlocks, this.ui.noticeActions, this.ui, ticker, { controlSkins: this.opts.controlSkins });
     this.root.addChild(dialog);
     this.overlays.push(dialog);
 
@@ -236,6 +258,36 @@ export class OpenUIPixi {
       this.root.addChild(bar);
       this.overlays.push(bar);
     }
+
+    // REPLAY badge (Stake replay mode) — a pill shown while `ui.replay` is true.
+    const replayBadge = new Container();
+    const replayBg = new Graphics();
+    const replayText = new Text({ text: this.ui.t('openui.replay').toUpperCase(), style: { fontFamily: this.ui.theme.type.family, fontSize: 16, fontWeight: '800', fill: 0xffffff, letterSpacing: 2 } });
+    replayText.anchor.set(0.5);
+    replayBadge.addChild(replayBg, replayText);
+    replayBadge.zIndex = 310;
+    replayBadge.visible = this.ui.replay.get();
+    this.root.addChild(replayBadge);
+    this.overlays.push({
+      applyLayout: (s) => {
+        const w = replayText.width + 36;
+        const h = 32;
+        replayBg.clear().roundRect(-w / 2, -h / 2, w, h, h / 2).fill({ color: 0x0c0d10 }).stroke({ width: 2, color: 0xffffff });
+        const top = statusBarSide === 'top' ? StatusBarView.heightFor(s) + 28 : 40;
+        replayBadge.position.set(s.width / 2, top);
+      },
+      dispose: () => {
+        if (!replayBadge.destroyed) replayBadge.destroy({ children: true });
+      },
+    });
+    this.disposers.push(
+      this.ui.replay.subscribe((v) => {
+        replayBadge.visible = v;
+      }),
+      this.ui.locale.subscribe(() => {
+        if (!replayBadge.destroyed) replayText.text = this.ui.t('openui.replay').toUpperCase();
+      }),
+    );
 
     // the settings button toggles ☰ ↔ ✕ with the popover's open state
     if (ic.settingsIdle && ic.settingsActive) {

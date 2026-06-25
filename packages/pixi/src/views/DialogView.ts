@@ -1,47 +1,49 @@
 import { Container, Graphics, Text, Rectangle, type Ticker } from 'pixi.js';
-import { type PanelControl, type OpenUI, type BlockSpec, type Signal, type ScreenState } from '@open-ui/core';
+import { type PanelControl, type OpenUI, type BlockSpec, type Signal, type ScreenState, type NoticeAction } from '@open-ui/core';
 import { ControlView } from './ControlView';
 import { buildBlockColumn, type ControlViewFactory } from './blockColumn';
 
 export interface DialogViewOptions {
   controlSkins?: Partial<Record<string, ControlViewFactory>>;
-  /** Localizable label for the built-in dismiss button. Default 'OK'. */
-  okLabel?: string;
   /** Max card width in px. Default 520. */
   maxWidth?: number;
 }
 
 const INSET = 24;
-const BTN_H = 52;
-const BTN_GAP = 14;
+const BTN_H = 50;
+const BTN_GAP = 12;
+const ROW_GAP = 16;
+
+interface BuiltButton {
+  node: Container;
+  bg: Graphics;
+  width: number;
+  variant: 'primary' | 'secondary';
+}
 
 /**
  * A centered, auto-sized modal rendered in the SAME style as the unified menu — the
- * same accent-stroked card on a dimmed backdrop, the same {@link buildBlockColumn}
- * block renderer — so notices/errors are fully themed for free (a theme restyles
- * them with zero extra work). Bound to a PanelControl; its content comes from a
- * `Signal<BlockSpec[]>` (e.g. `ui.noticeBlocks`) and rebuilds when that or the
- * locale changes. This is the Stake Engine error/notice surface (insufficient
- * funds, session expired, gambling-limit, maintenance, disconnect…). It's an
- * overlay (owns its open/closed visibility), so OpenUIPixi adds it to `overlays`.
+ * accent-stroked card on a dimmed backdrop, the same {@link buildBlockColumn}
+ * renderer — so notices/errors are themed for free. Content comes from a
+ * `Signal<BlockSpec[]>` and the footer buttons from a `Signal<NoticeAction[]>`;
+ * every label runs through `ui.t`, so the host's exact text or i18n keys are used.
+ * The Stake Engine error/notice surface (`showError` / `showRgsError`).
  */
 export class DialogView extends ControlView {
   private readonly backdrop = new Graphics();
   private readonly card = new Graphics();
   private readonly closeBtn = new Container();
-  private readonly okBtn = new Container();
-  private readonly okBg = new Graphics();
-  private readonly okText: Text;
   private readonly content = new Container();
   private readonly maskG = new Graphics();
+  private readonly buttons = new Container();
   private childViews: ControlView[] = [];
   private screen: ScreenState | undefined;
   private readonly maxWidth: number;
-  private readonly okKey: string;
 
   constructor(
     private readonly panel: PanelControl,
     private readonly blocks: Signal<BlockSpec[]>,
+    private readonly actions: Signal<NoticeAction[]>,
     ui: OpenUI,
     private readonly ticker: Ticker,
     private readonly opts: DialogViewOptions = {},
@@ -49,22 +51,13 @@ export class DialogView extends ControlView {
     super(panel, ui);
     this.zIndex = 130; // above the menu (120)
     this.maxWidth = opts.maxWidth ?? 520;
-    this.okKey = opts.okLabel ?? 'OK';
 
     this.backdrop.eventMode = 'static';
     this.backdrop.on('pointertap', () => this.panel.closePanel());
-
     this.buildClose();
 
-    this.okText = new Text({ text: ui.t(this.okKey), style: { fontFamily: ui.theme.type.family, fontSize: 20, fill: ui.theme.color.accentText, fontWeight: '800', letterSpacing: 1 } });
-    this.okText.anchor.set(0.5);
-    this.okBtn.eventMode = 'static';
-    this.okBtn.cursor = 'pointer';
-    this.okBtn.on('pointertap', () => this.panel.closePanel());
-    this.okBtn.addChild(this.okBg, this.okText);
-
     this.content.mask = this.maskG;
-    this.addChild(this.backdrop, this.card, this.content, this.maskG, this.okBtn, this.closeBtn);
+    this.addChild(this.backdrop, this.card, this.content, this.maskG, this.buttons, this.closeBtn);
 
     this.applyOpen(this.panel.isOpen);
     this.disposers.push(
@@ -72,10 +65,11 @@ export class DialogView extends ControlView {
       this.blocks.subscribe(() => {
         if (!this.destroyed) this.relayout();
       }),
+      this.actions.subscribe(() => {
+        if (!this.destroyed) this.relayout();
+      }),
       this.ui.locale.subscribe(() => {
-        if (this.destroyed) return;
-        this.okText.text = this.ui.t(this.okKey);
-        this.relayout();
+        if (!this.destroyed) this.relayout();
       }),
     );
   }
@@ -102,12 +96,11 @@ export class DialogView extends ControlView {
   private relayout(): void {
     const s = this.screen;
     if (!s) return;
-    if (!this.panel.isOpen) return; // nothing to build/measure while closed
+    if (!this.panel.isOpen) return;
     const W = s.width;
     const H = s.height;
     const t = this.ui.theme;
 
-    // (re)build the block column for the current content + width
     for (const v of this.childViews) v.dispose();
     this.childViews.length = 0;
     for (const ch of this.content.removeChildren()) ch.destroy();
@@ -118,9 +111,11 @@ export class DialogView extends ControlView {
     this.childViews = col.views;
     const kids = col.content.removeChildren();
     if (kids.length) this.content.addChild(...kids);
+    const contentH = col.height;
 
-    const contentH = col.height; // includes the column's own top/bottom padding
-    const wantH = contentH + BTN_GAP + BTN_H + INSET;
+    const buttonsH = this.buildButtons(innerW);
+
+    const wantH = contentH + (buttonsH ? ROW_GAP + buttonsH + INSET : INSET);
     const cardH = Math.min(H - 48, wantH);
     const cx = (W - cardW) / 2;
     const cy = (H - cardH) / 2;
@@ -129,19 +124,73 @@ export class DialogView extends ControlView {
     this.backdrop.hitArea = new Rectangle(0, 0, W, H);
     this.card.clear().roundRect(cx, cy, cardW, cardH, t.radius.card).fill({ color: t.color.surface }).stroke({ width: 2, color: t.color.accent });
 
-    // content column: rows are centered at local x=0, first row's padding at top
-    const bodyH = cardH - BTN_GAP - BTN_H - INSET;
+    const bodyH = cardH - (buttonsH ? ROW_GAP + buttonsH + INSET : INSET);
     this.content.x = cx + cardW / 2;
     this.content.y = cy;
-    this.maskG.clear().rect(cx, cy, cardW, bodyH).fill({ color: 0xffffff });
+    this.maskG.clear().rect(cx, cy, cardW, Math.max(0, bodyH)).fill({ color: 0xffffff });
 
-    // OK button
-    const okW = Math.min(innerW, 280);
-    this.okBg.clear().roundRect(-okW / 2, -BTN_H / 2, okW, BTN_H, BTN_H / 2).fill({ color: t.color.accent });
-    this.okBtn.position.set(cx + cardW / 2, cy + cardH - INSET / 2 - BTN_H / 2);
-    this.okBtn.hitArea = new Rectangle(-okW / 2, -BTN_H / 2, okW, BTN_H);
-
+    this.buttons.position.set(cx + cardW / 2, cy + cardH - INSET / 2 - buttonsH / 2);
     this.closeBtn.position.set(cx + cardW - 20, cy + 20);
+  }
+
+  /** Build the footer buttons from `noticeActions` into a centered row (shrunk to
+   *  fit if needed). Returns the row height (0 when there are no actions). */
+  private buildButtons(innerW: number): number {
+    for (const b of this.buttons.removeChildren()) b.destroy();
+    const acts = this.ui.noticeActions.get();
+    if (!acts.length) return 0;
+
+    const made = acts.map((a, i) => this.makeButton(a, a.variant ?? (i === 0 ? 'primary' : 'secondary'), innerW));
+    let total = made.reduce((sum, m) => sum + m.width, 0) + BTN_GAP * (made.length - 1);
+    if (total > innerW) {
+      const scale = innerW / total;
+      for (const m of made) {
+        m.width *= scale;
+        this.drawButton(m.bg, m.variant, m.width);
+        m.node.hitArea = new Rectangle(-m.width / 2, -BTN_H / 2, m.width, BTN_H);
+      }
+      total = made.reduce((sum, m) => sum + m.width, 0) + BTN_GAP * (made.length - 1);
+    }
+    let x = -total / 2;
+    for (const m of made) {
+      m.node.position.set(x + m.width / 2, 0);
+      x += m.width + BTN_GAP;
+      this.buttons.addChild(m.node);
+    }
+    return BTN_H;
+  }
+
+  private makeButton(action: NoticeAction, variant: 'primary' | 'secondary', innerW: number): BuiltButton {
+    const t = this.ui.theme;
+    const node = new Container();
+    const bg = new Graphics();
+    const label = new Text({
+      text: this.ui.t(action.label),
+      style: { fontFamily: t.type.family, fontSize: 18, fontWeight: '800', fill: variant === 'primary' ? t.color.accentText : t.color.text, letterSpacing: 0.5 },
+    });
+    label.anchor.set(0.5);
+    node.addChild(bg, label);
+    const width = Math.min(innerW, Math.max(140, label.width + 56));
+    this.drawButton(bg, variant, width);
+    node.eventMode = 'static';
+    node.cursor = 'pointer';
+    node.hitArea = new Rectangle(-width / 2, -BTN_H / 2, width, BTN_H);
+    node.on('pointertap', () => {
+      action.onSelect?.();
+      if (action.emit) this.ui.bus.emit('buttonActivated', { id: action.emit });
+      if (!action.keepOpen) this.panel.closePanel();
+    });
+    return { node, bg, width, variant };
+  }
+
+  private drawButton(bg: Graphics, variant: 'primary' | 'secondary', width: number): void {
+    const t = this.ui.theme;
+    bg.clear();
+    if (variant === 'primary') {
+      bg.roundRect(-width / 2, -BTN_H / 2, width, BTN_H, BTN_H / 2).fill({ color: t.color.accent });
+    } else {
+      bg.roundRect(-width / 2, -BTN_H / 2, width, BTN_H, BTN_H / 2).fill({ color: t.color.surfaceAlt }).stroke({ width: 2, color: t.color.accent });
+    }
   }
 
   private applyOpen(open: boolean): void {

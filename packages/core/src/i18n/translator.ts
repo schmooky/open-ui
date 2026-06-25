@@ -26,6 +26,43 @@ export const openuiDefaults: Record<string, string> = {
   'openui.settings': 'Settings',
   'openui.close': 'Close',
   'openui.language': 'Language',
+  // compliance readouts + autoplay limit headings
+  'openui.rtp': 'RTP',
+  'openui.net': 'Net',
+  'openui.session': 'Session',
+  'openui.lossLimit': 'Stop on loss',
+  'openui.winLimit': 'Stop on single win',
+  // notice / error modal
+  'openui.ok': 'OK',
+  'openui.cancel': 'Cancel',
+  'openui.confirm': 'Confirm',
+  'openui.continue': 'Continue',
+  'openui.reload': 'Reload',
+  'openui.error': 'Error',
+  'openui.notice': 'Notice',
+  'openui.replay': 'Replay',
+  'openui.buyFeature.title': 'Buy feature',
+  'openui.buyFeature.message': 'Buy this feature now?',
+  // reality check (RTS 13) — {{minutes}} interpolated by the caller if desired
+  'openui.realityCheck.title': 'Reality check',
+  'openui.realityCheck.message': "You've been playing for a while. Take a moment before continuing.",
+  // RGS error defaults (override via your messages dict or per-call)
+  'openui.err.generic.title': 'Something went wrong',
+  'openui.err.generic.message': 'Sorry, something went wrong. Please try again.',
+  'openui.err.insufficient.title': 'Insufficient funds',
+  'openui.err.insufficient.message': "You don't have enough balance to place this bet.",
+  'openui.err.session.title': 'Session expired',
+  'openui.err.session.message': 'Your session has expired. Reload the game to continue.',
+  'openui.err.limit.title': 'Limit reached',
+  'openui.err.limit.message': 'A gambling limit has been reached. Please try again later.',
+  'openui.err.activebet.title': 'Round in progress',
+  'openui.err.activebet.message': 'You already have a round in progress. Reload to finish it.',
+  'openui.err.location.title': 'Unavailable here',
+  'openui.err.location.message': 'This game is not available in your location.',
+  'openui.err.maintenance.title': 'Under maintenance',
+  'openui.err.maintenance.message': 'The game is briefly down for maintenance. Please try again soon.',
+  'openui.err.connection.title': 'Connection lost',
+  'openui.err.connection.message': 'A stable connection is required. Reload to finish any open round.',
 };
 
 function interpolate(template: string, vars?: Record<string, string | number>): string {
