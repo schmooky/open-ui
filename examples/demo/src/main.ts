@@ -293,6 +293,7 @@ async function main(): Promise<void> {
   });
 
   // ---- a few keyboard conveniences (the demo, not the library) ----
+  let controlsShown = true;
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === 'a') ui.spin.current === 'auto' ? ui.spin.idle() : ui.spin.auto();
@@ -310,6 +311,10 @@ async function main(): Promise<void> {
           { label: 'openui.ok', variant: 'secondary' },
         ],
       });
+    else if (k === 'h') {
+      controlsShown = !controlsShown;
+      hud.setControlsVisible(controlsShown); // slide the whole interactive HUD in/out
+    }
   });
 
   (window as unknown as Record<string, unknown>).ui = ui;

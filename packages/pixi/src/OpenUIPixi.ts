@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, type Application, type Texture } from 'pixi.js';
+import { Container, Graphics, Text, type Application, type Texture, type Ticker } from 'pixi.js';
 import {
   type OpenUI,
   type BlockSpec,
@@ -71,6 +71,11 @@ export interface OpenUIPixiOptions {
   statusBar?: StatusBarSide;
 }
 
+/** Smooth S-curve for the show/hide slide (translation only — no scaling). */
+function easeInOutCubic(p: number): number {
+  return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+}
+
 /**
  * The controller: mounts ONE root Container onto the host's existing stage,
  * shares the host ticker/renderer, drives resize, and exposes introspection.
@@ -83,6 +88,18 @@ export class OpenUIPixi {
   private readonly overlays: Array<{ applyLayout(s: ScreenState): void; dispose(): void }> = [];
   private readonly disposers: Array<() => void> = [];
   private _eventLog?: EventLog;
+  /** Show/hide slide: each interactive view slides toward its anchored edge (bottom
+   *  controls down, top up — behind the status-bar plaque). Views stay direct children
+   *  of `root` (introspection bounds unchanged); only their y moves, and the
+   *  ref-counted input lock makes them non-interactive while moving/hidden. */
+  private slideProg = 1; // 0 = shown · 1 = fully hidden (starts hidden → slides in on mount)
+  private slideTarget = 1;
+  private slideHeld = false;
+  private lastScreenH = 1080;
+  private appTicker?: Ticker;
+  private slideTickFn?: (t: Ticker) => void;
+  private readonly slideBaseY = new Map<ControlView, number>();
+  private readonly slideSign = new Map<ControlView, number>();
 
   constructor(
     private readonly ui: OpenUI,
@@ -96,6 +113,7 @@ export class OpenUIPixi {
 
   mount(app: Application): void {
     const { stage, renderer, ticker } = app;
+    this.appTicker = ticker;
     stage.sortableChildren = true;
     this.root.zIndex = 10_000;
     this.root.sortableChildren = true;
@@ -312,14 +330,21 @@ export class OpenUIPixi {
       // A status bar insets the HUD by its height on that edge — controls anchored to
       // the same edge shift away, as if the bar added a margin to them.
       const barH = statusBarSide ? StatusBarView.heightFor(screen) : 0;
+      this.slideBaseY.clear();
+      this.slideSign.clear();
       for (const v of this.views) {
         v.applyLayout(screen);
+        const anchor = this.ui.control(idByView.get(v) ?? '')?.layout.anchor ?? 'bottom-center';
         if (barH) {
-          const anchor = this.ui.control(idByView.get(v) ?? '')?.layout.anchor ?? '';
           if (statusBarSide === 'top' && anchor.startsWith('top')) v.y += barH;
           else if (statusBarSide === 'bottom' && anchor.startsWith('bottom')) v.y -= barH;
         }
+        // record the resting y + slide direction (top controls up, the rest down)
+        this.slideBaseY.set(v, v.y);
+        this.slideSign.set(v, anchor.startsWith('top') ? -1 : 1);
       }
+      this.lastScreenH = screen.height;
+      this.applySlide();
       for (const o of this.overlays) o.applyLayout(screen);
     };
     const onResize = (): void => {
@@ -330,6 +355,11 @@ export class OpenUIPixi {
     const unsubScreen = this.ui.screen.subscribe(applyLayout);
     onResize();
     applyLayout();
+
+    // Start fully shown. The game can slide the HUD in/out any time via
+    // `hud.hideControls()` / `hud.showControls()` (e.g. hide then show for an intro).
+    this.slideProg = 0;
+    this.applySlide();
 
     this.disposers.push(() => renderer.off('resize', onResize), unsubScreen);
 
@@ -360,7 +390,63 @@ export class OpenUIPixi {
     });
   }
 
+  /**
+   * Slide the whole interactive HUD in (`true`) or out (`false`): bottom-anchored
+   * controls travel down, top-anchored travel up (behind the status-bar plaque).
+   * Pure translation (no scaling); controls are non-interactive while moving/hidden.
+   */
+  setControlsVisible(visible: boolean): void {
+    const target = visible ? 0 : 1;
+    this.slideTarget = target;
+    // non-interactive while moving/hidden — hold the ref-counted input lock
+    if (!this.slideHeld) {
+      this.ui.lock();
+      this.slideHeld = true;
+    }
+    const settle = (): void => {
+      // fully shown → release the lock; fully hidden → stay locked
+      if (this.slideProg === 0 && this.slideHeld) {
+        this.ui.unlock();
+        this.slideHeld = false;
+      }
+    };
+    if (!this.appTicker) {
+      this.slideProg = target;
+      this.applySlide();
+      settle();
+      return;
+    }
+    const from = this.slideProg;
+    let elapsed = 0;
+    if (this.slideTickFn) this.appTicker.remove(this.slideTickFn);
+    const tick = (t: Ticker): void => {
+      elapsed += t.deltaMS;
+      const k = Math.min(1, elapsed / 360);
+      this.slideProg = from + (target - from) * k;
+      if (k >= 1) {
+        this.slideProg = target;
+        this.appTicker?.remove(tick);
+        this.slideTickFn = undefined;
+        settle();
+      }
+      this.applySlide();
+    };
+    this.slideTickFn = tick;
+    this.appTicker.add(tick);
+  }
+
+  /** Apply the current slide progress: translate each interactive view toward its
+   *  anchored edge (pure translation — no scaling). */
+  private applySlide(): void {
+    const off = easeInOutCubic(this.slideProg) * this.lastScreenH;
+    for (const [view, baseY] of this.slideBaseY) {
+      view.y = baseY + (this.slideSign.get(view) ?? 1) * off;
+    }
+  }
+
   unmount(): void {
+    if (this.slideTickFn && this.appTicker) this.appTicker.remove(this.slideTickFn);
+    this.slideTickFn = undefined;
     for (const v of this.views) v.dispose();
     this.views.length = 0;
     for (const o of this.overlays) o.dispose();
@@ -384,6 +470,7 @@ export class OpenUIPixi {
       isAnimating: (id: string) => this.ui.control(id)?.inspect().animating ?? false,
       bounds: (id: string) => this.ui.snapshot().find((s) => s.id === id)?.bounds ?? null,
       events: (since: number) => this._eventLog?.since(since) ?? [],
+      controlsReady: () => this.slideProg < 0.001,
     };
   }
 }

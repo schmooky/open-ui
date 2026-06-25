@@ -110,8 +110,11 @@ hud.showError('Session expired.', {           // …or your exact text + custom 
 Put the readouts in a thin strip with **`statusBar: 'top' | 'bottom'`** (otherwise
 they sit at screen corners). `minimumRoundDuration` is surfaced as
 `ui.minimumRoundDuration` for the **game** to enforce — open-ui never throttles the
-round. Try the flags live:
-`localhost:5199/?juris=rtp,net,timer,noturbo,noslam&statusbar=top`.
+round. Slide the whole interactive HUD in/out with **`hud.showControls()` /
+`hud.hideControls()`** — bottom controls drop, top ones rise behind the plaque (pure
+translation, non-interactive while moving). Try the flags live:
+`localhost:5199/?juris=rtp,net,timer,noturbo,noslam&statusbar=top` (press **H** to
+slide the HUD).
 
 ## Repo layout
 

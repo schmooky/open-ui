@@ -59,6 +59,11 @@ export interface BootedHud {
   setReplay(on: boolean): void;
   /** Show a buy-feature confirm modal (Cancel / Confirm). Texts are literal-or-key. */
   confirmBuy(opts: { title?: string; message?: string; onConfirm: () => void; confirmLabel?: string; cancelLabel?: string }): void;
+  /** Slide the whole interactive HUD in / out — bottom controls go down, top ones up
+   *  (behind the status-bar plaque). Non-interactive while moving. */
+  showControls(): void;
+  hideControls(): void;
+  setControlsVisible(visible: boolean): void;
   snapshot(): ControlSnapshot[];
   readonly events: EventLog | undefined;
   readonly inputLocked: Signal<boolean>;
@@ -177,6 +182,9 @@ export function mountHud(app: Application, spec: UISpec = {}, opts: HudOptions =
           { label: o.confirmLabel ?? 'openui.confirm', variant: 'primary', onSelect: o.onConfirm },
         ],
       ),
+    showControls: () => pixi.setControlsVisible(true),
+    hideControls: () => pixi.setControlsVisible(false),
+    setControlsVisible: (v) => pixi.setControlsVisible(v),
     snapshot: () => ui.snapshot(),
     events: pixi.eventLog,
     inputLocked: ui.locked,
