@@ -17,6 +17,9 @@ export interface ButtonViewOptions {
   iconTexture?: Texture;
   /** Target sprite height in reference px. */
   iconTarget?: number;
+  /** Monochrome look — white circle, black ring, black glyph (matches the turbo
+   *  button's b&w art). Only affects the drawn (no-texture) circle path. */
+  mono?: boolean;
 }
 
 /**
@@ -35,6 +38,7 @@ export class ButtonView extends ControlView {
   private readonly pillHeight: number;
   private glyph: ButtonGlyph;
   private readonly iconTarget: number;
+  private readonly mono: boolean;
 
   constructor(private readonly btn: ButtonControl, ui: OpenUI, ticker: Ticker, opts: ButtonViewOptions = {}) {
     super(btn, ui);
@@ -44,6 +48,7 @@ export class ButtonView extends ControlView {
     this.pillHeight = opts.height ?? 56;
     this.glyph = opts.glyph ?? 'none';
     this.iconTarget = opts.iconTarget ?? 84;
+    this.mono = opts.mono ?? false;
     this.addChild(this.art);
 
     if (opts.iconTexture) {
@@ -158,11 +163,15 @@ export class ButtonView extends ControlView {
     const t = this.ui.theme;
     const g = this.bg;
     g.clear();
-    const ink = this.btn.current === 'disabled' ? t.color.textDim : t.color.text;
+    const disabled = this.btn.current === 'disabled';
+    // Monochrome (turbo-style) buttons: white circle, black ring, black glyph.
+    const fillC = this.mono ? '#ffffff' : t.color.surface;
+    const lineC = this.mono ? '#0a0a0a' : t.color.accent;
+    const ink = this.mono ? (disabled ? '#9aa0a6' : '#0a0a0a') : disabled ? t.color.textDim : t.color.text;
     if (this.shape === 'circle') {
       const r = this.radius;
-      g.circle(0, 0, r).fill({ color: t.color.surface });
-      g.circle(0, 0, r).stroke({ width: 4, color: t.color.accent });
+      g.circle(0, 0, r).fill({ color: fillC, alpha: this.mono && disabled ? 0.6 : 1 });
+      g.circle(0, 0, r).stroke({ width: this.mono ? 5 : 4, color: lineC });
       if (this.glyph === 'menu') {
         for (const dy of [-8, 0, 8]) g.moveTo(-13, dy).lineTo(13, dy).stroke({ width: 4, color: ink });
       } else if (this.glyph === 'close') {

@@ -71,7 +71,7 @@ export function mountHud(app: Application, spec: UISpec = {}, opts: HudOptions =
   const locales = spec.locale ? Array.from(new Set([spec.locale.locale, ...Object.keys(spec.locale.messages)])) : [];
   // `menu: false` (e.g. when the host supplies its own HTML menu) skips the Pixi menu.
   const menu = pixiOpts.menu === false ? false : composeMenu(spec.menu, { locales, localeSelectId: spec.localeSelectId, rulesFallback: spec.rules });
-  const pixi = new OpenUIPixi(ui, { ...pixiOpts, menu });
+  const pixi = new OpenUIPixi(ui, { ...pixiOpts, menu, statusBar: pixiOpts.statusBar ?? spec.statusBar });
   pixi.mount(app);
 
   // Extra declarative panels (beyond the settings menu) render as their own layers.

@@ -37,6 +37,8 @@ const cfg = {
   // buy-feature: ?activation=single|multi (default multi) · ?blockbuy=1
   activation: (q.get('activation') === 'single' ? 'single' : 'multi') as 'single' | 'multi',
   blockBuy: q.get('blockbuy') === '1',
+  // status bar edge for the compliance readouts: ?statusbar=top|bottom|off (default top)
+  statusBar: (q.get('statusbar') === 'bottom' ? 'bottom' : q.get('statusbar') === 'off' ? undefined : 'top') as 'top' | 'bottom' | undefined,
 };
 
 /** Parse `?juris=rtp,net,timer,noturbo,noslam,…` into a Stake Engine JurisdictionConfig
@@ -75,6 +77,7 @@ function buildSpec(): UISpec {
     // reads ?juris=…; a real game gets this from the RGS authenticate response).
     rtp: 96,
     jurisdiction: JURISDICTION,
+    statusBar: cfg.statusBar,
     // Desktop button layout CLONED from the reference UI design (Dev.svg): a bottom
     // bar — balance · play · SPIN · turbo · bet (+ steppers to its right) — with the
     // bonus on the right rail and the ☰ menu on the lower left. The design has no
@@ -167,8 +170,6 @@ async function main(): Promise<void> {
   };
   const spinDefault = await load('/spin/default.svg');
   const spinAuto = await load('/spin/auto.svg');
-  const menuTex = await load('/icons/menu.svg');
-  const [menuIdle, menuClose] = sliceRows(menuTex, 2);
   const rulesTex = await load('/icons/rules.svg');
   const musicTrack = await load('/icons/slider-music-track.svg');
   const soundTrack = await load('/icons/slider-sound-track.svg');
@@ -186,9 +187,8 @@ async function main(): Promise<void> {
     menu: false, // the one biased menu design is the HTML one, mounted below
     spinSkin: () => svgSpinSkin({ default: spinDefault, auto: spinAuto }),
     icons: {
-      settingsIdle: menuIdle,
-      settingsActive: menuClose,
-      close: menuClose,
+      // menu (☰), fullscreen + mute render as b&w "mono" glyph buttons like turbo —
+      // no settings art passed, so the library draws the mono ☰ (toggles to ✕).
       rules: rulesTex,
       sliderMusic: musicTrack,
       sliderSound: soundTrack,

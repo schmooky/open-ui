@@ -200,6 +200,9 @@ export interface UISpec {
   jurisdiction?: JurisdictionConfig;
   /** Initial RTP percentage for the RTP readout (e.g. 96 → "96.0%"). */
   rtp?: number;
+  /** Put the compliance readouts (net · RTP · session) in a thin status bar pinned
+   *  to the `'top'` or `'bottom'` edge instead of at screen corners. */
+  statusBar?: 'top' | 'bottom';
 }
 
 /** The result of building a PanelSpec: the panel + every leaf control, in render order. */

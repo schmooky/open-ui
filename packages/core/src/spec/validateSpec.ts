@@ -111,6 +111,9 @@ export function validateSpec(spec: UISpec): { ok: boolean; issues: SpecIssue[] }
     if (spec.rtp != null && !(typeof spec.rtp === 'number' && Number.isFinite(spec.rtp))) {
       add('error', 'rtp', 'bad-rtp', `rtp must be a number, got ${String(spec.rtp)}`);
     }
+    if (spec.statusBar != null && spec.statusBar !== 'top' && spec.statusBar !== 'bottom') {
+      add('error', 'statusBar', 'bad-statusbar', `statusBar must be 'top' or 'bottom', got "${String(spec.statusBar)}"`);
+    }
 
     if (spec.controls) {
       for (const [id, ov] of Object.entries(spec.controls)) {

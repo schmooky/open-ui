@@ -18,6 +18,7 @@ import { AutoplayDrawerView } from './views/AutoplayDrawerView';
 import { MenuView } from './views/MenuView';
 import { ReadoutView } from './views/ReadoutView';
 import { DialogView } from './views/DialogView';
+import { StatusBarView, type StatusBarSide } from './views/StatusBarView';
 import { type ControlViewFactory } from './views/blockColumn';
 import { type SpinSkinFactory } from './skin/SpinSkin';
 
@@ -62,6 +63,12 @@ export interface OpenUIPixiOptions {
    * `'radial'` fans the count chips around the spin button.
    */
   autoplayPicker?: 'drawer' | 'radial';
+  /**
+   * Put the compliance readouts (net · RTP · session) in a thin status strip at the
+   * `'top'` or `'bottom'` edge instead of at screen corners. Each readout still only
+   * shows when its jurisdiction `display*` flag is set.
+   */
+  statusBar?: StatusBarSide;
 }
 
 /**
@@ -108,6 +115,7 @@ export class OpenUIPixi {
       glyph: 'menu',
       iconTexture: ic.settingsIdle,
       iconTarget: 88,
+      mono: true, // b&w like the turbo button (used on the drawn glyph path)
     });
     settingsView.zIndex = 5;
 
@@ -137,13 +145,17 @@ export class OpenUIPixi {
     const betPlusView = new ButtonView(this.ui.betPlus, this.ui, ticker, { shape: 'circle', radius: 30, iconTexture: ic.betPlus, iconTarget: 64 });
     const betMinusView = new ButtonView(this.ui.betMinus, this.ui, ticker, { shape: 'circle', radius: 30, iconTexture: ic.betMinus, iconTarget: 64 });
 
-    // edge controls (master mute + fullscreen) + the compliance readouts (RTP /
-    // net position / session timer — Stake Engine jurisdiction display elements).
-    const muteView = new ButtonView(this.ui.muteButton, this.ui, ticker, { shape: 'circle', radius: 26, glyph: 'speaker', iconTarget: 52 });
-    const fullscreenView = new ButtonView(this.ui.fullscreenButton, this.ui, ticker, { shape: 'circle', radius: 26, glyph: 'fullscreen', iconTarget: 52 });
-    const rtpView = new ReadoutView(this.ui.rtp, this.ui, ticker);
-    const netView = new ReadoutView(this.ui.netPosition, this.ui, ticker);
-    const timerView = new ReadoutView(this.ui.sessionTimer, this.ui, ticker);
+    // edge controls (master mute + fullscreen) — b&w "mono" buttons like turbo.
+    const muteView = new ButtonView(this.ui.muteButton, this.ui, ticker, { shape: 'circle', radius: 22, glyph: 'speaker', iconTarget: 44, mono: true });
+    const fullscreenView = new ButtonView(this.ui.fullscreenButton, this.ui, ticker, { shape: 'circle', radius: 22, glyph: 'fullscreen', iconTarget: 44, mono: true });
+    muteView.zIndex = 65; // above the status bar (60) so they read as part of it
+    fullscreenView.zIndex = 65;
+    // Compliance readouts (RTP / net / session): in a thin status bar if configured,
+    // else at screen corners. Bar items are created inline by the StatusBarView.
+    const statusBarSide = this.opts.statusBar;
+    const rtpView = statusBarSide ? undefined : new ReadoutView(this.ui.rtp, this.ui, ticker);
+    const netView = statusBarSide ? undefined : new ReadoutView(this.ui.netPosition, this.ui, ticker);
+    const timerView = statusBarSide ? undefined : new ReadoutView(this.ui.sessionTimer, this.ui, ticker);
 
     // Every view is mounted; `ui.hidden` only toggles VISIBILITY (so a responsive
     // breakpoint can show/hide a control at runtime — Charter P10). Hidden views
@@ -160,10 +172,10 @@ export class OpenUIPixi {
       [this.ui.betMinus.id, betMinusView],
       [this.ui.muteButton.id, muteView],
       [this.ui.fullscreenButton.id, fullscreenView],
-      [this.ui.rtp.id, rtpView],
-      [this.ui.netPosition.id, netView],
-      [this.ui.sessionTimer.id, timerView],
     ];
+    if (rtpView) entries.push([this.ui.rtp.id, rtpView]);
+    if (netView) entries.push([this.ui.netPosition.id, netView]);
+    if (timerView) entries.push([this.ui.sessionTimer.id, timerView]);
     const viewById = new Map<string, ControlView>();
     for (const [id, view] of entries) {
       view.visible = !this.ui.hidden.has(id);
@@ -216,6 +228,13 @@ export class OpenUIPixi {
     this.root.addChild(dialog);
     this.overlays.push(dialog);
 
+    // Optional status bar (net · RTP · session) pinned to the top/bottom edge.
+    if (statusBarSide) {
+      const bar = new StatusBarView([this.ui.netPosition, this.ui.rtp, this.ui.sessionTimer], this.ui, ticker, statusBarSide);
+      this.root.addChild(bar);
+      this.overlays.push(bar);
+    }
+
     // the settings button toggles ☰ ↔ ✕ with the popover's open state
     if (ic.settingsIdle && ic.settingsActive) {
       const idle = ic.settingsIdle;
@@ -223,6 +242,13 @@ export class OpenUIPixi {
       this.disposers.push(
         this.ui.settingsPanel.state.subscribe(() => {
           settingsView.setIconTexture(this.ui.settingsPanel.isOpen ? active : idle);
+        }),
+      );
+    } else {
+      // no art → the mono ☰ glyph toggles to ✕ when the menu opens
+      this.disposers.push(
+        this.ui.settingsPanel.state.subscribe(() => {
+          settingsView.setGlyph(this.ui.settingsPanel.isOpen ? 'close' : 'menu');
         }),
       );
     }

@@ -94,11 +94,13 @@ hud.showError('Session expired. Reload to continue.'); // a themed, menu-style m
 | Autoplay **loss-limit** + **single-win stop** + stop-anytime | in the picker; enforced via `reportRound` |
 | Slam-stop disabled | the spin button dims + locks during the spin |
 | Insufficient funds / session expired / maintenance / disconnect | `hud.showNotice` / `showError` |
-| Master mute + fullscreen | icon controls at the screen edge |
+| Master mute + fullscreen | black-and-white icon controls at the screen edge |
 
-`minimumRoundDuration` is surfaced as `ui.minimumRoundDuration` for the **game** to
-enforce — open-ui never throttles the round. Try the flags live:
-`localhost:5199/?juris=rtp,net,timer,noturbo,noslam`.
+Put the readouts in a thin strip with **`statusBar: 'top' | 'bottom'`** (otherwise
+they sit at screen corners). `minimumRoundDuration` is surfaced as
+`ui.minimumRoundDuration` for the **game** to enforce — open-ui never throttles the
+round. Try the flags live:
+`localhost:5199/?juris=rtp,net,timer,noturbo,noslam&statusbar=top`.
 
 ## Repo layout
 

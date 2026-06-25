@@ -18,6 +18,7 @@ export * from './views/PanelBodyView';
 export * from './views/MenuView';
 export * from './views/ReadoutView';
 export * from './views/DialogView';
+export * from './views/StatusBarView';
 export * from './mountHud';
 export * from './renderers/TextCellRenderer';
 export * from './skin/SpinSkin';

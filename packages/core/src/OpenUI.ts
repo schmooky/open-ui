@@ -169,8 +169,8 @@ export class OpenUI {
     this.betStepper = new StepperControl({ id: 'bet-stepper', layout: { anchor: 'center' }, levels: [0.5, 1, 2, 5, 10, 20], index: 1 }, this.bus);
 
     // edge controls: master mute + fullscreen (icon buttons at the screen corner)
-    this.muteButton = new ButtonControl({ id: 'mute', layout: { anchor: 'top-right', offset: [-176, 56] } }, this.bus);
-    this.fullscreenButton = new ButtonControl({ id: 'fullscreen', layout: { anchor: 'top-right', offset: [-92, 56] } }, this.bus);
+    this.muteButton = new ButtonControl({ id: 'mute', layout: { anchor: 'top-right', offset: [-110, 28] } }, this.bus);
+    this.fullscreenButton = new ButtonControl({ id: 'fullscreen', layout: { anchor: 'top-right', offset: [-52, 28] } }, this.bus);
 
     // compliance readouts — created hidden; a jurisdiction's display* flag reveals them
     this.rtp = new ReadoutControl({ id: 'rtp', kind: 'percent', label: 'RTP', layout: { anchor: 'top-left', offset: [120, 96] } });
