@@ -1,0 +1,64 @@
+{
+  "name": "@open-ui/core",
+  "version": "0.1.0",
+  "description": "Headless, zero-dependency core for open-ui — signals, control state-machines, theme tokens, layout, façade, event bus and introspection for slot-game UIs.",
+  "keywords": [
+    "slot",
+    "slots",
+    "igaming",
+    "casino",
+    "game-ui",
+    "hud",
+    "headless",
+    "state-machine",
+    "pixijs",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "schmooky and the open-ui contributors",
+  "homepage": "https://github.com/schmooky/open-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schmooky/open-ui.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/schmooky/open-ui/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "source": "./src/index.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "vitest": "^3.0.5"
+  }
+}

@@ -1,0 +1,54 @@
+---
+layout: ../../layouts/Docs.astro
+title: Re-skin with tokens
+section: recipes
+eyebrow: Recipe
+description: A small token override re-skins the whole HUD — no logic changes, nothing breaks un-themed.
+---
+
+Look is data. `extendTheme` deep-merges your overrides onto the default, so you
+only state what changes (Charter&nbsp;P8/G5).
+
+## The recipe
+
+```ts
+import { OpenUI, extendTheme, defaultTheme } from '@open-ui/core';
+import { OpenUIPixi } from '@open-ui/pixi';
+
+const ocean = extendTheme(defaultTheme, {
+  color: {
+    accent: '#36c5f0',
+    accentText: '#04212e',
+    surface: '#06283d',
+    surfaceAlt: '#041c2c',
+    text: '#eaf6ff',
+  },
+  radius: { pill: 999, card: 20 },
+  motion: { fast: 90, base: 160 },
+});
+
+const ui = new OpenUI({ theme: ocean });
+new OpenUIPixi(ui).mount(app);
+```
+
+## Combine tokens with a skin
+
+Tokens recolour the drawn defaults; a skin replaces them with art. Use both:
+
+```ts
+new OpenUIPixi(ui, {
+  spinSkin: () => svgSpinSkin({ default: spinTex, auto: autoTex }),
+  icons: { turboOff, turboOn, bonus },
+});
+```
+
+## Guarantees
+
+- A partial override is fine — every token has a safe fallback.
+- No logic changes: the same controls, events and tests apply.
+- Components never break un-themed.
+
+## See also
+
+- [Theming by tokens](/guides/theming/)
+- [Layout & anchors](/guides/layout/)

@@ -1,0 +1,100 @@
+---
+layout: ../../layouts/Docs.astro
+title: Theming by tokens
+section: guides
+eyebrow: Concepts
+description: Look is data. A small token override re-skins the whole HUD, and components never break un-themed.
+---
+
+In open-ui, **look is data** (Charter&nbsp;P8). A `Theme` is a token set — colour,
+space, radius, type, motion — with semantic aliases and safe fallbacks. A
+per-game theme is a small override map; nothing in the logic changes.
+
+## The quick path: a preset
+
+Four presets ship in the box — pick one by name in the [config](/guides/configuration/):
+
+```ts
+mountHud(app, { theme: 'default' | 'midnight' | 'neon' | 'light' });
+// tweak a preset's tokens:
+mountHud(app, { theme: { preset: 'neon', overrides: { color: { accent: '#ff4d6d' } } } });
+```
+
+The `light` preset renders the menu as a white card. Everything in it is a
+configurable block — a banner image, divider headings, a multiplier paytable with
+symbol icons, bold body text, a stat grid, a callout:
+
+<img src="/hero/menu-light.png" alt="The light-theme menu: banner, divider headers, symbol-icon paytable, bold rules" width="1440" height="900" style="border-radius:12px;border:1px solid var(--border);margin-top:0.5rem" />
+
+## Safe by design — theme it, don't break it
+
+Host `overrides` are a **curated subset** — `color`, `radius`, and `type.family`.
+The structural tokens (spacing, motion timing, font sizes) aren't exposed, so a
+theme can restyle the HUD but can't break its layout or timing. Every value is also
+validated at runtime: an invalid colour or a non-finite radius is **dropped and
+reported**, and the safe token shows through. A broken theme is impossible:
+
+```ts
+mountHud(app, {
+  theme: { preset: 'neon', overrides: { color: { accent: 'not-a-color' } } },
+  hooks: { onDataIssue: (i) => console.warn(i.code, i.message) }, // 'bad-color', …
+});
+// → still renders perfectly, with neon's accent.
+```
+
+Everything below is the underlying token model, for shipping a full preset of your own.
+
+## The default theme
+
+```ts
+export const defaultTheme = {
+  color: {
+    accent: '#FFC935', accentText: '#111',
+    surface: '#111', surfaceAlt: '#000',
+    text: '#fff', textDim: '#444', disabled: '#666',
+  },
+  radius: { pill: 999, card: 16 },
+  space:  { sm: 8, md: 16, lg: 24 },
+  type:   { family: 'system-ui', size: { sm: 14, md: 18, lg: 24 } },
+  motion: { fast: 120, base: 200, slow: 320 },
+};
+```
+
+## Re-skin in ~15 lines
+
+`extendTheme` deep-merges an override onto the default, so you only state what
+changes. One change cascades through the semantic aliases.
+
+```ts
+import { OpenUI } from '@open-ui/core';
+import { extendTheme, defaultTheme } from '@open-ui/core';
+
+const scrollOfFate = extendTheme(defaultTheme, {
+  color: { accent: '#E8B23A', surface: '#1a0f08', surfaceAlt: '#0d0704' },
+  radius: { card: 22 },
+});
+
+const ui = new OpenUI({ theme: scrollOfFate });
+```
+
+## Tokens vs. skins
+
+There are two layers of "look", and they're independent:
+
+- **Theme** = renderer-agnostic *data* (the tokens above). Lives in `@open-ui/core`.
+- **Skin** = a renderer-side *drawer*. For Pixi, swap art per control via `OpenUIPixi`'s `spinSkin` / `icons` — e.g. `svgSpinSkin({ default, auto })`.
+
+```ts
+new OpenUIPixi(ui, {
+  spinSkin: () => svgSpinSkin({ default: spinTex, auto: autoTex }),
+  icons: { settingsIdle, settingsActive, close, turboOff, turboOn /* … */ },
+});
+```
+
+Components **never break un-themed**: every token has a safe fallback, so a
+partial override (or no override at all) still renders correctly (Charter&nbsp;G5).
+
+## Next
+
+- [Responsive layout](/guides/layout/) — the other half of "look": placement
+- [Re-skin with tokens](/recipes/theme-override/) — a copy-paste recipe

@@ -1,0 +1,19 @@
+# dependencies
+node_modules
+
+# build output (workspace packages/apps — vendor/*/dist is checked-in source)
+packages/*/dist
+apps/*/dist
+examples/*/dist
+.astro
+*.tsbuildinfo
+
+# test + tooling artifacts
+test-results
+playwright-report
+examples/demo/screenshots
+
+# misc
+*.log
+.DS_Store
+Archive.zip

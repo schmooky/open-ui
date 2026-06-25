@@ -1,0 +1,145 @@
+---
+import Base from '../layouts/Base.astro';
+import { OPEN_UI_VERSION } from '../lib/version.ts';
+
+const principles = [
+  { n: 'P1', title: 'Biased, not neutral', body: 'A stateful, opinionated HUD with M-V-C inside. The game talks to it, never through it.' },
+  { n: 'P3', title: 'Headless core, thin renderer', body: 'All state, logic, layout & theming live in zero-dependency @open-ui/core. @open-ui/pixi is a thin view.' },
+  { n: 'P5', title: 'Every control is a state machine', body: 'State is the single source of truth for look, interactivity, and tests. No second “is it disabled?”.' },
+  { n: 'P8', title: 'Themeable by tokens', body: 'Look is data: a small token override re-skins the whole HUD. Nothing renders un-themed.' },
+  { n: 'P10', title: 'Introspection is first-class', body: 'window.__OPENUI__ reports every control’s state, interactability and bounds — no pixel reading.' },
+  { n: 'P12', title: 'Leak-free lifecycle', body: 'Every subscription, tween and timer returns a disposer. One dispose() tears it all down.' },
+];
+
+const config = `import { mountHud } from '@open-ui/pixi';
+
+mountHud(app, {
+  theme: 'neon',                 // 'default' | 'midnight' | 'neon'
+  turbo:    { modes: 3 },        // 2-mode toggle or 3-mode switcher
+  autoplay: { mode: 'options' }, // 'options' drawer, or 'infinite'
+  spin:     { press: 'hold-to-spin' }, // 'tap' or hold-to-turbo-spin
+  responsive: {                  // restyle per device / orientation
+    mobile:  { controls: { bonus: { hidden: true } } },
+    portrait:{ controls: { spin: { layout: { anchor: 'bottom-center', offset: [0, -470] } } } },
+  },
+});`;
+---
+<Base>
+  <!-- Hero -->
+  <section class="relative overflow-hidden border-b border-border/60">
+    <div class="absolute inset-0 grid-bg opacity-60"></div>
+    <div class="container relative py-16 md:py-24">
+      <div class="mx-auto max-w-3xl text-center">
+        <span class="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+          <span class="h-1.5 w-1.5 rounded-full bg-[#ffc935]"></span>
+          PixiJS v8 · v{OPEN_UI_VERSION}
+        </span>
+        <h1 class="mt-6 text-4xl font-bold tracking-tight sm:text-6xl gradient-text">
+          A slot HUD you configure, not build.
+        </h1>
+        <p class="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
+          open-ui is a <strong class="text-foreground">biased, themeable</strong> UI library for slot games.
+          Mount the whole HUD onto your PixiJS scene in <strong class="text-foreground">one call</strong>,
+          then set how it looks and behaves with <strong class="text-foreground">plain string-literal options</strong>.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <a href="/guides/getting-started/" class="inline-flex h-11 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90">
+            Get started
+          </a>
+          <a href="/guides/configuration/" class="inline-flex h-11 items-center rounded-md border border-border px-6 text-sm font-medium text-foreground transition-colors hover:bg-secondary/50">
+            See every option
+          </a>
+        </div>
+      </div>
+
+      <!-- Hero shots: the real HUD, screenshotted by the example client's Playwright suite -->
+      <div class="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+        <figure class="overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+          <img src="/hero/hud-desktop.png" alt="open-ui HUD on desktop, neon theme" width="1440" height="900" class="w-full" loading="eager" />
+        </figure>
+        <figure class="mx-auto w-44 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:w-40">
+          <img src="/hero/hud-mobile.png" alt="open-ui HUD on a phone, portrait" width="390" height="844" class="w-full" loading="eager" />
+        </figure>
+      </div>
+      <p class="mt-3 text-center text-xs text-muted-foreground">
+        The same HUD, same code — reflowed per device. These are real Playwright screenshots from the
+        <a href="/guides/testing/" class="underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground">device test suite</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- Configure everything -->
+  <section class="container py-16">
+    <div class="mx-auto max-w-2xl text-center">
+      <h2 class="text-2xl font-semibold tracking-tight">Configure it, don't fork it</h2>
+      <p class="mt-2 text-muted-foreground">
+        One JSON spec sets the theme, the turbo modes, how autoplay and the spin button behave,
+        and how the HUD reflows on every screen. Typed, so a typo is a compile error.
+      </p>
+    </div>
+    <div class="mx-auto mt-8 grid max-w-5xl gap-6 lg:grid-cols-2 lg:items-center">
+      <div class="rounded-xl border border-border surface-code p-5">
+        <pre class="overflow-x-auto text-[13px] leading-6"><code>{config}</code></pre>
+      </div>
+      <figure class="overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+        <img src="/hero/autoplay-drawer.png" alt="The autoplay count picker drawer sliding up from below" width="1440" height="900" class="w-full" />
+        <figcaption class="border-t border-border/60 px-4 py-2 text-xs text-muted-foreground">
+          autoplay <code class="rounded bg-muted px-1 py-0.5">mode: 'options'</code> → a bottom drawer to pick a count, then Start.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Principles -->
+  <section class="container py-12">
+    <div class="mx-auto mb-10 max-w-2xl text-center">
+      <h2 class="text-2xl font-semibold tracking-tight">Opinions, on purpose</h2>
+      <p class="mt-2 text-muted-foreground">A few of the postulates that make the rest of it fall out for free.</p>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {principles.map((p) => (
+        <div class="rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40">
+          <div class="font-mono text-xs font-semibold text-[#caa000] dark:text-[#ffc935]">{p.n}</div>
+          <div class="mt-1 font-semibold tracking-tight">{p.title}</div>
+          <p class="mt-2 text-sm leading-6 text-muted-foreground">{p.body}</p>
+        </div>
+      ))}
+    </div>
+    <div class="mt-6 text-center">
+      <a href="/charter/" class="text-sm font-medium text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground">
+        Read the Charter →
+      </a>
+    </div>
+  </section>
+
+  <!-- Packages + quickstart -->
+  <section class="container py-12">
+    <div class="mx-auto max-w-4xl">
+      <h2 class="mb-6 text-2xl font-semibold tracking-tight">Two packages</h2>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="rounded-xl border border-border bg-card p-6">
+          <div class="flex items-center justify-between">
+            <code class="font-mono text-sm font-semibold">@open-ui/core</code>
+            <span class="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">zero deps</span>
+          </div>
+          <p class="mt-3 text-sm leading-6 text-muted-foreground">Headless M + C — signals, control state-machines, theme tokens, layout, the façade, the event bus, introspection.</p>
+        </div>
+        <div class="rounded-xl border border-border bg-card p-6">
+          <div class="flex items-center justify-between">
+            <code class="font-mono text-sm font-semibold">@open-ui/pixi</code>
+            <span class="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">peer: pixi.js ^8</span>
+          </div>
+          <p class="mt-3 text-sm leading-6 text-muted-foreground">The PixiJS v8 view + controller binding. Mounts one Container, shares your ticker &amp; renderer.</p>
+        </div>
+      </div>
+      <div class="mt-8 rounded-xl border border-border surface-code p-5">
+        <pre class="overflow-x-auto text-sm leading-6"><code>{`import { mountHud } from '@open-ui/pixi';
+
+const hud = mountHud(app);              // whole HUD, one Container onto YOUR stage
+hud.on('spinRequested', () => game.spin());   // events out
+hud.ui.spin.busy();                           // commands in
+hud.setBalance(1234);`}</code></pre>
+      </div>
+    </div>
+  </section>
+</Base>

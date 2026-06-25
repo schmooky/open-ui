@@ -1,0 +1,91 @@
+---
+layout: ../../layouts/Docs.astro
+title: Getting started
+section: guides
+eyebrow: Start here
+description: Mount the whole open-ui HUD onto an existing PixiJS v8 app in one call.
+---
+
+open-ui mounts as **one layer** into a PixiJS v8 app you already have. You don't
+build the HUD — you `mountHud()` it, configure it, and then **talk to it**.
+
+## Requirements
+
+- Node 20+ and a package manager (pnpm recommended)
+- A PixiJS v8 `Application` — open-ui shares your `app.stage`, `ticker` and `renderer`
+
+## Install
+
+```bash
+pnpm add @open-ui/core @open-ui/pixi pixi.js
+```
+
+`pixi.js` is a **peer dependency** of `@open-ui/pixi` so there is exactly one
+deduped instance shared between your game and the UI (Charter&nbsp;B2).
+
+## Mount the whole HUD in one call
+
+```ts
+import { Application } from 'pixi.js';
+import { mountHud } from '@open-ui/pixi';
+
+const app = new Application();
+await app.init({ background: '#0b0e13', resizeTo: window });
+document.body.appendChild(app.canvas);
+
+// the entire HUD, mounted as one Container onto YOUR stage
+const hud = mountHud(app);
+```
+
+That puts a correct, laid-out HUD on screen: spin, balance, bet, autoplay, turbo,
+bet ±, a settings popover and a rules modal — all wired, all responsive. To shape
+it, pass a [config](/guides/configuration/):
+
+```ts
+const hud = mountHud(app, {
+  theme: 'neon',
+  turbo:    { modes: 3 },
+  autoplay: { mode: 'options' },
+  spin:     { press: 'hold-to-spin' },
+});
+```
+
+## Talk to it: events out, commands in
+
+The boundary is the whole product. The game **listens** for intents and
+**commands** the display — it never reaches into a widget. `hud.ui` is the headless
+façade; `hud.on(...)` subscribes; `hud.setBalance(...)` is a shortcut.
+
+```ts
+hud.on('spinRequested', async () => {
+  hud.ui.spin.busy();                          // command in: show the spinning state
+  hud.setBalance(hud.ui.balance.get() - hud.ui.bet.get());
+  const result = await game.spin();            // your RGS call
+  if (result.win) hud.setBalance(hud.ui.balance.get() + result.win);
+  hud.ui.spin.idle();
+});
+```
+
+## Add it to any slot
+
+That's the whole integration: import `mountHud`, call it with your `app`, wire
+`spinRequested` to your spin and feed results back with `hud.setBalance()`. The
+HUD owns its own layout, theming, animation and teardown — you own the game.
+
+## Tear it down cleanly
+
+```ts
+hud.dispose();   // removes the layer + every listener, tween and timer
+```
+
+<blockquote>
+  Nothing leaks: every subscription returns a disposer and the base type enforces
+  teardown (Charter&nbsp;P12).
+</blockquote>
+
+## Next
+
+- **Configure it** → [Configuration](/guides/configuration/)
+- **Re-skin it** → [Theming by tokens](/guides/theming/)
+- **Reflow per device** → [Responsive layout](/guides/layout/)
+- **Test it** → [Introspection & testing](/guides/testing/)

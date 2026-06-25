@@ -1,0 +1,67 @@
+{
+  "name": "@open-ui/pixi",
+  "version": "0.1.0",
+  "description": "PixiJS v8 view + controller binding for open-ui — mount a themeable, responsive, fully-tested slot-game HUD onto your Pixi scene in one call.",
+  "keywords": [
+    "pixijs",
+    "pixi",
+    "slot",
+    "slots",
+    "igaming",
+    "casino",
+    "game-ui",
+    "hud",
+    "webgl",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "schmooky and the open-ui contributors",
+  "homepage": "https://github.com/schmooky/open-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schmooky/open-ui.git",
+    "directory": "packages/pixi"
+  },
+  "bugs": {
+    "url": "https://github.com/schmooky/open-ui/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "source": "./src/index.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@open-ui/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "pixi.js": "^8"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5"
+  }
+}

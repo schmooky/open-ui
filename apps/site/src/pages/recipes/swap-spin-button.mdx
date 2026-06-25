@@ -1,0 +1,61 @@
+---
+layout: ../../layouts/Docs.astro
+title: Swap the spin button
+section: recipes
+eyebrow: Recipe
+description: Replace any control with your own class, a Spine skeleton, or a transparent tap-area — without forking.
+---
+
+The spin button is a **slot, not a fixture** (Charter&nbsp;P7). Anything that
+satisfies the `Control` contract is legal, and defaults always remain.
+
+## Option A — a custom skin (most common)
+
+Keep open-ui's `SpinControl` state machine; swap only the renderer:
+
+```ts
+import { svgSpinSkin } from '@open-ui/pixi';
+
+new OpenUIPixi(ui, {
+  spinSkin: () => svgSpinSkin({ default: myNeonSpinTex, auto: myNeonAutoTex }),
+});
+```
+
+## Option B — your own Control subclass
+
+Subclass `Control` (or `SpinControl`) to add states or change behaviour, then
+register it so the handle resolves to your class:
+
+```ts
+import { SpinControl } from '@open-ui/core';
+import { Turn, Pulse } from '@open-ui/core';
+
+class NeonSpin extends SpinControl {
+  readonly states = {
+    ...super.states,
+    charging: { interactable: false, transition: new Pulse(1.12, 200) },
+  };
+  charge() { this.setState('charging'); }
+}
+```
+
+## Option C — a transparent tap-the-reels area
+
+Provide a control that's just a hit-area bound to the reel rectangle — the
+canonical "tap anywhere to spin" pattern. It still emits `spinRequested`, so the
+rest of your wiring is unchanged:
+
+```ts
+ui.on('spinRequested', () => game.spin()); // works no matter which control fired it
+```
+
+## Why this works
+
+Every control is resolved from a registry and emits the same typed events. Swap
+the *look* or the *class*; the **boundary stays identical** — your
+`ui.on('spinRequested', …)` handler never changes (Charter&nbsp;G4).
+
+## See also
+
+- [Theming by tokens](/guides/theming/)
+- [Configuration](/guides/configuration/) — set the spin behavior (`tap` / `hold-to-spin`)

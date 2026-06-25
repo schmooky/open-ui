@@ -1,0 +1,81 @@
+---
+layout: ../../layouts/Docs.astro
+title: Events
+section: docs
+eyebrow: API reference
+description: One typed event bus — no magic strings. Payloads are checked at compile time.
+---
+
+open-ui has **one** typed event bus (Charter&nbsp;B1) — not callbacks here,
+`CustomEvent`s there, and magic strings everywhere. Subscribe with `ui.on(type,
+fn)`; every payload is checked at compile time.
+
+## The event map
+
+```ts
+type OpenUIEvents = {
+  spinRequested: void;
+  skipRequested: void;
+  stateChanged:  { id: string; from: string; to: string };
+  buttonActivated: { id: string };
+  valueChanged:  { id: string; value: number };
+  panelToggled:  { id: string; open: boolean };
+  toggled:       { id: string; on: boolean };
+  autoplayStarted: { count: number };
+  autoplayStopped: void;
+  cardActivated: { id: string };
+  localeChanged: string;
+};
+```
+
+## Subscribe
+
+`on` returns a `Dispose` — call it to unsubscribe (and store it; everything in
+open-ui is disposer-driven).
+
+```ts
+const off = ui.on('valueChanged', ({ id, value }) => {
+  if (id === 'bet-stepper') game.setBet(value);
+});
+// later
+off();
+```
+
+## The domain events a game handles
+
+Most navigation is wired internally; a game typically only listens for these:
+
+| Event | Fires when | Typical handler |
+|---|---|---|
+| `spinRequested` | player presses spin (and it's interactable) | start a round: `ui.spin.busy()` then call your RGS |
+| `skipRequested` | player taps during an autoplay-engaged spin | slam-stop the reels |
+| `autoplayStarted` | player picks an autoplay count | run the spin loop, `ui.autoplay.setCount(n)` each round |
+| `autoplayStopped` | autoplay ends or is cancelled | stop the loop |
+| `valueChanged` | a slider or stepper moved | `bet-stepper` → set bet; `music`/`sfx` → set volume |
+| `toggled` | a switch flipped | `turbo` → set turbo mode |
+
+## Example loop
+
+```ts
+ui.on('spinRequested', async () => {
+  ui.spin.busy();
+  const result = await game.spin();
+  ui.balance.set(result.balance);
+  ui.spin.idle();
+});
+
+ui.on('autoplayStarted', async ({ count }) => {
+  let left = count;
+  while (ui.autoplay.isActive && left > 0) {
+    ui.autoplay.setCount(left);
+    await game.spin();
+    if (left !== Infinity) left -= 1;
+  }
+  if (ui.autoplay.isActive) ui.autoplay.stop();
+});
+```
+
+## Next
+
+- [Run an autoplay loop](/recipes/autoplay-loop/)
+- [Drive it from a server](/recipes/server-driven/)

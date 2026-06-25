@@ -1,0 +1,26 @@
+---
+import Docs from '../../layouts/Docs.astro';
+
+const recipes = [
+  { href: '/recipes/swap-spin-button/', title: 'Swap the spin button', blurb: 'Replace any control with your own class, a Spine, or a tap-area — in one line.' },
+  { href: '/recipes/theme-override/', title: 'Re-skin with tokens', blurb: 'A ~15-line token override that re-skins the whole HUD.' },
+  { href: '/recipes/autoplay-loop/', title: 'Run an autoplay loop', blurb: 'open-ui shows the live count; your host runs the spins.' },
+  { href: '/recipes/server-driven/', title: 'Drive it from a server', blurb: 'Server-authoritative display: the UI shows values the host sets.' },
+  { href: '/recipes/e2e-introspection/', title: 'Read state in an e2e test', blurb: 'Query state, interactability and bounds from window.__OPENUI__.' },
+];
+---
+<Docs title="Recipes" section="recipes" eyebrow="Cookbook" description="Short, copy-paste solutions to common open-ui tasks.">
+  <p>Short, copy-paste solutions to common tasks. Each assumes you've done <a href="/guides/getting-started/">Getting started</a>.</p>
+
+  <div class="mt-8 grid gap-3 not-prose sm:grid-cols-2">
+    {recipes.map((r) => (
+      <a href={r.href} class="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40 hover:bg-secondary/30">
+        <div class="flex items-center justify-between">
+          <span class="font-semibold tracking-tight">{r.title}</span>
+          <span class="text-muted-foreground transition-transform group-hover:translate-x-0.5">→</span>
+        </div>
+        <p class="mt-2 text-sm leading-6 text-muted-foreground">{r.blurb}</p>
+      </a>
+    ))}
+  </div>
+</Docs>

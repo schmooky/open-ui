@@ -1,0 +1,51 @@
+---
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+const {
+  title = 'open-ui — biased, themeable PixiJS UI for slot games',
+  description = 'A biased, stateful, themeable PixiJS UI library for slot games. Mounts as one layer, owns its M-V-C, talked to through a typed façade, built to be swapped, themed, animated, and tested.',
+} = Astro.props as Props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {/*
+      Set the theme class before first paint so there's no flash of the wrong
+      mode. Reads an explicit choice from localStorage, else the OS preference.
+      Inline (is:inline) so it ships verbatim and runs synchronously.
+    */}
+    <script is:inline>
+      (() => {
+        const stored = localStorage.getItem('theme');
+        const dark = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    />
+  </head>
+  <body>
+    <Nav />
+    <main><slot /></main>
+    <Footer />
+  </body>
+</html>

@@ -1,0 +1,260 @@
+import { Container, type Application, type Texture } from 'pixi.js';
+import {
+  type OpenUI,
+  type BlockSpec,
+  type ScreenState,
+  EventLog,
+  buildBlocks,
+  buttonBlocks,
+  composeMenu,
+} from '@open-ui/core';
+import { type ControlView } from './views/ControlView';
+import { SpinView } from './views/SpinView';
+import { ValueDisplayView } from './views/ValueDisplayView';
+import { ButtonView } from './views/ButtonView';
+import { TurboView } from './views/TurboView';
+import { AutoplayView } from './views/AutoplayView';
+import { AutoplayDrawerView } from './views/AutoplayDrawerView';
+import { MenuView } from './views/MenuView';
+import { type ControlViewFactory } from './views/blockColumn';
+import { type SpinSkinFactory } from './skin/SpinSkin';
+
+export interface OpenUIIcons {
+  settingsIdle?: Texture;
+  settingsActive?: Texture;
+  close?: Texture;
+  rules?: Texture;
+  sliderMusic?: Texture;
+  sliderSound?: Texture;
+  turboOff?: Texture;
+  turboOn?: Texture;
+  /** One texture per turbo mode (index-aligned) — for 3-mode art. Wins over off/on. */
+  turboModes?: Texture[];
+  autoIdle?: Texture;
+  autoActive?: Texture;
+  bonus?: Texture;
+  betPlus?: Texture;
+  betMinus?: Texture;
+}
+
+export interface OpenUIPixiOptions {
+  /** Expose `window.__OPENUI__` for e2e/introspection. Default true. */
+  expose?: boolean;
+  /** Override the spin control's skin (default = the art-free Graphics placeholder). */
+  spinSkin?: SpinSkinFactory;
+  /** Real art for the menu/close/slider controls (else neutral placeholders). */
+  icons?: OpenUIIcons;
+  /**
+   * The composed MENU blocks (Settings → Paytable → Rules) the ☰ button opens in a
+   * scrollable sheet. Usually built by `mountHud` via `composeMenu(spec.menu, …)`;
+   * omitted → a default Settings-only menu (Music/Sound). Pass `false` to skip the
+   * built-in Pixi menu entirely (e.g. when supplying your own HTML/DOM menu).
+   */
+  menu?: BlockSpec[] | false;
+  /** Header title for the menu sheet (localizable). Default 'Menu'. */
+  menuTitle?: string;
+  /** Per-id view override — swap a control's renderer without forking (Charter P7). */
+  controlSkins?: Partial<Record<string, ControlViewFactory>>;
+  /**
+   * Autoplay count-picker presentation. `'drawer'` (default) is a bottom sheet;
+   * `'radial'` fans the count chips around the spin button.
+   */
+  autoplayPicker?: 'drawer' | 'radial';
+}
+
+/**
+ * The controller: mounts ONE root Container onto the host's existing stage,
+ * shares the host ticker/renderer, drives resize, and exposes introspection.
+ * `unmount()` removes the layer and every listener it created (Charter P2/P12).
+ */
+export class OpenUIPixi {
+  readonly root = new Container();
+  private readonly views: ControlView[] = [];
+  /** Full-screen overlays (e.g. the autoplay drawer) that own their own layout. */
+  private readonly overlays: Array<{ applyLayout(s: ScreenState): void; dispose(): void }> = [];
+  private readonly disposers: Array<() => void> = [];
+  private _eventLog?: EventLog;
+
+  constructor(
+    private readonly ui: OpenUI,
+    private readonly opts: OpenUIPixiOptions = {},
+  ) {}
+
+  /** The bus event log backing `window.__OPENUI__.events` (available after mount). */
+  get eventLog(): EventLog | undefined {
+    return this._eventLog;
+  }
+
+  mount(app: Application): void {
+    const { stage, renderer, ticker } = app;
+    stage.sortableChildren = true;
+    this.root.zIndex = 10_000;
+    this.root.sortableChildren = true;
+    stage.addChild(this.root);
+
+    const ic = this.opts.icons ?? {};
+
+    // spin + balance/bet value displays
+    const spinView = new SpinView(this.ui.spin, this.ui, ticker, this.opts.spinSkin);
+    const balanceView = new ValueDisplayView(this.ui.balance, this.ui, ticker);
+    const betView = new ValueDisplayView(this.ui.bet, this.ui, ticker);
+
+    // settings button (☰) → the unified scrollable MENU (settings/paytable/rules)
+    const settingsView = new ButtonView(this.ui.settingsButton, this.ui, ticker, {
+      shape: 'circle',
+      radius: 40,
+      glyph: 'menu',
+      iconTexture: ic.settingsIdle,
+      iconTarget: 88,
+    });
+    settingsView.zIndex = 5;
+
+    // `menu: false` skips the built-in Pixi menu (e.g. a host-supplied HTML menu).
+    const menuView = this.opts.menu === false ? undefined : this.buildMenu(ticker);
+
+    // bottom bar: turbo / autoplay / bonus / bet ± stepper
+    const turboView = new TurboView(this.ui.turbo, this.ui, ticker, {
+      offTexture: ic.turboOff,
+      onTexture: ic.turboOn,
+      modeTextures: ic.turboModes,
+      target: 88,
+    });
+    const spinOff = this.ui.spin.layout.offset ?? [0, 0];
+    const autoOff = this.ui.autoplay.layout.offset ?? [0, 0];
+    const picker = this.opts.autoplayPicker ?? 'drawer';
+    const autoplayView = new AutoplayView(this.ui.autoplay, this.ui, ticker, {
+      idleTexture: ic.autoIdle,
+      activeTexture: ic.autoActive,
+      target: 88,
+      picker,
+      arcCenter: { x: spinOff[0] - autoOff[0], y: spinOff[1] - autoOff[1] },
+      arcStepDeg: 22,
+    });
+    autoplayView.zIndex = 20;
+    const bonusView = new ButtonView(this.ui.bonusButton, this.ui, ticker, { shape: 'circle', radius: 44, iconTexture: ic.bonus, iconTarget: 110 });
+    const betPlusView = new ButtonView(this.ui.betPlus, this.ui, ticker, { shape: 'circle', radius: 30, iconTexture: ic.betPlus, iconTarget: 64 });
+    const betMinusView = new ButtonView(this.ui.betMinus, this.ui, ticker, { shape: 'circle', radius: 30, iconTexture: ic.betMinus, iconTarget: 64 });
+
+    // Every view is mounted; `ui.hidden` only toggles VISIBILITY (so a responsive
+    // breakpoint can show/hide a control at runtime — Charter P10). Hidden views
+    // stay laid out + introspectable in snapshot, they're just not drawn.
+    const entries: Array<[string, ControlView]> = [
+      [this.ui.spin.id, spinView],
+      [this.ui.balance.id, balanceView],
+      [this.ui.bet.id, betView],
+      [this.ui.settingsButton.id, settingsView],
+      [this.ui.turbo.id, turboView],
+      [this.ui.autoplay.id, autoplayView],
+      [this.ui.bonusButton.id, bonusView],
+      [this.ui.betPlus.id, betPlusView],
+      [this.ui.betMinus.id, betMinusView],
+    ];
+    const viewById = new Map<string, ControlView>();
+    for (const [id, view] of entries) {
+      view.visible = !this.ui.hidden.has(id);
+      this.root.addChild(view);
+      this.views.push(view);
+      viewById.set(id, view);
+    }
+    this.disposers.push(
+      this.ui.on('visibilityChanged', ({ id, hidden }) => {
+        const v = viewById.get(id);
+        if (v) v.visible = !hidden;
+      }),
+    );
+
+    // The menu is a full-screen overlay that manages its OWN open/closed visibility
+    // (driven by the panel state) — so it's an overlay, not a force-visible view.
+    if (menuView) {
+      this.root.addChild(menuView);
+      this.overlays.push(menuView);
+    }
+
+    // The autoplay bottom drawer (the options-mode picker) is a full-screen overlay.
+    if (picker === 'drawer') {
+      const drawer = new AutoplayDrawerView(this.ui.autoplay, this.ui, ticker);
+      this.root.addChild(drawer);
+      this.overlays.push(drawer);
+    }
+
+    // the settings button toggles ☰ ↔ ✕ with the popover's open state
+    if (ic.settingsIdle && ic.settingsActive) {
+      const idle = ic.settingsIdle;
+      const active = ic.settingsActive;
+      this.disposers.push(
+        this.ui.settingsPanel.state.subscribe(() => {
+          settingsView.setIconTexture(this.ui.settingsPanel.isOpen ? active : idle);
+        }),
+      );
+    }
+
+    const applyLayout = (): void => {
+      const screen = this.ui.screen.get();
+      for (const v of this.views) v.applyLayout(screen);
+      for (const o of this.overlays) o.applyLayout(screen);
+    };
+    const onResize = (): void => {
+      this.ui.setScreen(app.screen.width, app.screen.height);
+    };
+
+    renderer.on('resize', onResize);
+    const unsubScreen = this.ui.screen.subscribe(applyLayout);
+    onResize();
+    applyLayout();
+
+    this.disposers.push(() => renderer.off('resize', onResize), unsubScreen);
+
+    this._eventLog = new EventLog(this.ui.bus);
+
+    if (this.opts.expose ?? true) this.expose();
+  }
+
+  /**
+   * Build the unified scrollable MENU bound to the ☰ panel. Composed `menu` blocks
+   * are given by `mountHud`; absent → a default Settings-only menu. Built-in ids
+   * ('music'/'sfx') are reused, not shadowed (P10); button blocks wire `closePanel`.
+   */
+  private buildMenu(ticker: Application['ticker']): ControlView {
+    const menu = this.opts.menu && this.opts.menu.length ? this.opts.menu : composeMenu(undefined, {});
+    const controls = buildBlocks(menu, this.ui.bus, undefined, (id) => this.ui.control(id));
+    for (const c of controls) if (!this.ui.control(c.id)) this.ui.register(c);
+    const buttons = buttonBlocks(menu);
+    this.disposers.push(
+      this.ui.bus.on('buttonActivated', ({ id }) => {
+        const b = buttons.find((x) => x.id === id);
+        if (b?.action === 'closePanel') this.ui.settingsPanel.closePanel();
+      }),
+    );
+    return new MenuView(this.ui.settingsPanel, controls, menu, this.ui, ticker, {
+      controlSkins: this.opts.controlSkins,
+      title: this.opts.menuTitle,
+    });
+  }
+
+  unmount(): void {
+    for (const v of this.views) v.dispose();
+    this.views.length = 0;
+    for (const o of this.overlays) o.dispose();
+    this.overlays.length = 0;
+    this._eventLog?.dispose();
+    this._eventLog = undefined;
+    for (const d of this.disposers) d();
+    this.disposers.length = 0;
+    if (!this.root.destroyed) this.root.destroy({ children: true });
+    if (typeof window !== 'undefined') {
+      delete (window as unknown as Record<string, unknown>).__OPENUI__;
+    }
+  }
+
+  private expose(): void {
+    if (typeof window === 'undefined') return;
+    (window as unknown as Record<string, unknown>).__OPENUI__ = {
+      snapshot: () => this.ui.snapshot(),
+      getState: (id: string) => this.ui.control(id)?.current ?? null,
+      isInteractable: (id: string) => this.ui.control(id)?.interactable ?? false,
+      isAnimating: (id: string) => this.ui.control(id)?.inspect().animating ?? false,
+      bounds: (id: string) => this.ui.snapshot().find((s) => s.id === id)?.bounds ?? null,
+      events: (since: number) => this._eventLog?.since(since) ?? [],
+    };
+  }
+}

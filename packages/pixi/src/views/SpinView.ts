@@ -1,0 +1,144 @@
+import { Container, Circle, type Ticker } from 'pixi.js';
+import { type SpinControl, type OpenUI, type Transition } from '@open-ui/core';
+import { ControlView } from './ControlView';
+import { Tweener } from '../tween';
+import { defaultSpinSkin } from '../skin/defaultSkin';
+import { type SpinSkin, type SpinSkinFactory } from '../skin/SpinSkin';
+import { isDesktop } from '../util';
+
+/**
+ * Pixi view for the spin control. Owns input forwarding + transition playback;
+ * delegates ALL drawing to a swappable skin (Charter B3/P8). The layout scale
+ * lives on `this`; transitions animate the inner `art` container, so squish/turn
+ * never fight the responsive fit-scale — and the skin's art animates with them.
+ */
+export interface SpinViewOptions {
+  /** Skin factory for the spin art. */
+  skin?: SpinSkinFactory;
+  /** How long (ms) a press must be held before hold-to-spin engages. Default 260. */
+  holdDelayMs?: number;
+}
+
+export class SpinView extends ControlView {
+  private readonly art = new Container();
+  private readonly skin: SpinSkin;
+  private readonly tween: Tweener;
+  private readonly holdDelayMs: number;
+  private holdTimer: ReturnType<typeof setTimeout> | undefined;
+  private holding = false;
+
+  constructor(
+    private readonly spin: SpinControl,
+    ui: OpenUI,
+    ticker: Ticker,
+    skinOrOpts: SpinSkinFactory | SpinViewOptions = defaultSpinSkin,
+  ) {
+    super(spin, ui);
+    this.tween = new Tweener(ticker);
+    // Back-compat: a bare factory still works; an options object adds hold tuning.
+    const opts: SpinViewOptions = typeof skinOrOpts === 'function' ? { skin: skinOrOpts } : skinOrOpts;
+    const skinFactory: SpinSkinFactory = opts.skin ?? defaultSpinSkin;
+    this.holdDelayMs = opts.holdDelayMs ?? 260;
+
+    this.skin = skinFactory(ui.theme);
+    this.art.addChild(this.skin.view);
+    this.addChild(this.art);
+
+    this.hitArea = new Circle(0, 0, 118);
+    this.eventMode = 'static';
+    this.cursor = 'pointer';
+
+    this.on('pointerover', this.onOver);
+    this.on('pointerout', this.onOut);
+    this.on('pointerdown', this.onDown);
+    this.on('pointerup', this.onUp);
+    this.on('pointerupoutside', this.onUpOutside);
+
+    this.disposers.push(
+      this.spin.state.subscribe(() => {
+        this.skin.update(this.spin.current);
+        this.updateInteractive();
+      }),
+      this.spin.onTransition((t) => this.play(t)),
+    );
+
+    this.skin.update(this.spin.current);
+    this.updateInteractive();
+  }
+
+  private readonly onOver = (): void => {
+    if (isDesktop() && this.spin.current === 'idle') this.spin.setState('hover');
+  };
+  private readonly onOut = (): void => {
+    if (this.spin.current === 'hover') this.spin.setState('idle');
+  };
+  private readonly onDown = (): void => {
+    if (!this.spin.interactable) return;
+    this.spin.setState('pressed');
+    if (this.spin.holdToSpin) {
+      this.holdTimer = setTimeout(() => {
+        this.holdTimer = undefined;
+        if (this.spin.current !== 'pressed') return; // released before the threshold
+        if (this.spin.holdBegin()) {
+          this.holding = true;
+          if (typeof window !== 'undefined') {
+            window.addEventListener('pointerup', this.endHoldGlobal);
+            window.addEventListener('pointercancel', this.endHoldGlobal);
+          }
+        }
+      }, this.holdDelayMs);
+    }
+  };
+  private readonly onUp = (): void => {
+    if (this.holding) return this.endHold();
+    this.clearHoldTimer();
+    if (this.spin.current === 'pressed') {
+      this.spin.setState('idle');
+      this.spin.activate();
+    }
+  };
+  private readonly onUpOutside = (): void => {
+    if (this.holding) return this.endHold();
+    this.clearHoldTimer();
+    if (this.spin.current === 'pressed') this.spin.setState('idle');
+  };
+
+  private readonly endHoldGlobal = (): void => this.endHold();
+  private clearHoldTimer(): void {
+    if (this.holdTimer != null) {
+      clearTimeout(this.holdTimer);
+      this.holdTimer = undefined;
+    }
+  }
+  private endHold(): void {
+    if (!this.holding) return;
+    this.holding = false;
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('pointerup', this.endHoldGlobal);
+      window.removeEventListener('pointercancel', this.endHoldGlobal);
+    }
+    this.spin.holdEnd();
+    if (this.spin.current === 'pressed') this.spin.setState('idle');
+  }
+
+  private updateInteractive(): void {
+    const ok = this.spin.interactable;
+    this.eventMode = ok ? 'static' : 'none';
+    this.cursor = ok ? 'pointer' : 'default';
+  }
+
+  private play(t: Transition | undefined): void {
+    this.animating = true;
+    void this.tween.run(this.art, t, this.ui.theme).then(() => {
+      this.animating = false;
+    });
+  }
+
+  override dispose(): void {
+    this.clearHoldTimer();
+    this.endHold();
+    this.tween.stop();
+    this.skin.destroy();
+    super.dispose();
+  }
+}

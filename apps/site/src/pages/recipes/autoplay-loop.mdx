@@ -1,0 +1,49 @@
+---
+layout: ../../layouts/Docs.astro
+title: Run an autoplay loop
+section: recipes
+eyebrow: Recipe
+description: open-ui owns the picker and the live count; your host runs the actual spins.
+---
+
+open-ui owns the autoplay **picker UI** and the displayed **count**. The host
+runs the actual spin loop and feeds the remaining count back via `setCount`. This
+is identical whether autoplay is configured as a count `'options'` drawer or
+`'infinite'` — the host only ever reacts to `autoplayStarted` (where `count` is
+`Infinity` for infinite mode).
+
+## The recipe
+
+```ts
+ui.on('autoplayStarted', async ({ count }) => {
+  let left = count;                       // count can be Infinity (∞)
+  while (ui.autoplay.isActive && left > 0) {
+    ui.autoplay.setCount(left);           // update the live count badge
+
+    ui.spin.busy();
+    const result = await game.spin();     // your RGS round
+    ui.balance.set(result.balance);
+    ui.spin.idle();
+
+    if (left !== Infinity) left -= 1;
+    await new Promise((r) => setTimeout(r, 250)); // breath between rounds
+  }
+  if (ui.autoplay.isActive) ui.autoplay.stop();   // clean stop at the end
+});
+
+ui.on('autoplayStopped', () => {
+  // player cancelled, or the loop ended — stop any pending work
+});
+```
+
+## Stopping mid-loop
+
+The player can stop autoplay at any time — `ui.autoplay.isActive` flips to
+`false`, so the `while` condition exits on the next iteration. A tap on the spin
+button during an engaged autoplay spin emits `skipRequested` (a slam-stop), **not**
+a stop of autoplay.
+
+## See also
+
+- [Events](/docs/events/) — `autoplayStarted` / `autoplayStopped`
+- [Configuration › Autoplay](/guides/configuration/#autoplay--options-drawer-or-infinite)

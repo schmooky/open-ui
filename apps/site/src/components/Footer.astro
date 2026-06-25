@@ -1,0 +1,56 @@
+---
+const cols = [
+  {
+    title: 'Learn',
+    items: [
+      { href: '/guides/getting-started/', label: 'Getting started' },
+      { href: '/guides/configuration/', label: 'Configuration' },
+      { href: '/guides/testing/', label: 'Introspection & testing' },
+    ],
+  },
+  {
+    title: 'Reference',
+    items: [
+      { href: '/docs/openui/', label: 'Mount & façade' },
+      { href: '/docs/events/', label: 'Events' },
+      { href: '/charter/', label: 'The Charter' },
+    ],
+  },
+  {
+    title: 'More',
+    items: [
+      { href: '/recipes/', label: 'Recipes' },
+      { href: '/guides/theming/', label: 'Theming' },
+      { href: 'https://github.com/schmooky/open-ui', label: 'GitHub' },
+    ],
+  },
+];
+---
+<footer class="mt-20 border-t border-border/60 bg-card/30">
+  <div class="container py-12">
+    <div class="grid grid-cols-2 gap-10 md:grid-cols-4">
+      <div>
+        <div class="flex items-center gap-2 font-mono text-sm font-semibold">
+          <span>open-ui</span>
+        </div>
+        <p class="mt-3 max-w-xs text-sm text-muted-foreground">
+          A biased, stateful, themeable PixiJS UI library for slot games. One layer in, talked to from outside.
+        </p>
+      </div>
+      {cols.map((col) => (
+        <div class="flex flex-col gap-2">
+          <div class="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">{col.title}</div>
+          {col.items.map((item) => (
+            <a href={item.href} class="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              {item.label}
+            </a>
+          ))}
+        </div>
+      ))}
+    </div>
+    <div class="mt-10 flex items-center justify-between border-t border-border/50 pt-6 text-xs text-muted-foreground">
+      <span>MIT licensed.</span>
+      <span>Built with Astro &amp; Tailwind.</span>
+    </div>
+  </div>
+</footer>

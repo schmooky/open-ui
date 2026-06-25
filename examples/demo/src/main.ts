@@ -1,0 +1,384 @@
+import { Application, Assets, Container, Graphics, Rectangle, Texture } from 'pixi.js';
+import { mountHud, svgSpinSkin } from '@open-ui/pixi';
+import type { UISpec, CurrencySpec, ThemePreset } from '@open-ui/core';
+import { MESSAGES } from './locales';
+import { RULES_BLOCKS, FEATURES } from './content';
+import { mountHtmlMenu } from './htmlMenu';
+import { mountBuyFeatureModal } from './buyFeatureModal';
+
+/**
+ * The open-ui EXAMPLE CLIENT — a throwaway host "game" (a shuffling pip grid) with
+ * the real @open-ui HUD mounted on top in ONE call. Everything the HUD looks and
+ * behaves like is set by a plain JSON UISpec, here read from the URL so the
+ * Playwright suites can screenshot every permutation:
+ *
+ *   ?theme=neon&turbo=3&autoplay=infinite&spin=hold&currency=BTC&locale=ja&bare=1
+ *   ?accent=%23ff0000   (theme override — try a broken value, it can't break the UI)
+ */
+
+const legendEl = document.getElementById('legend') as HTMLDivElement;
+const q = new URLSearchParams(location.search);
+if (q.get('bare') === '1') document.body.classList.add('bare');
+
+const CURRENCIES: Record<string, { spec: CurrencySpec; balance: number; bet: number }> = {
+  USD: { spec: { code: 'USD', decimals: 2 }, balance: 1000, bet: 1 },
+  EUR: { spec: { code: 'EUR', decimals: 2, decimalChar: ',', separator: '.' }, balance: 1000, bet: 1 },
+  BTC: { spec: { code: 'BTC', decimals: 8 }, balance: 1.23456789, bet: 0.0001 },
+};
+
+const cfg = {
+  theme: (q.get('theme') ?? 'midnight') as ThemePreset,
+  accent: q.get('accent') ?? undefined,
+  turbo: q.get('turbo') === '3' ? (3 as const) : (2 as const),
+  autoplay: q.get('autoplay') === 'infinite' ? ('infinite' as const) : ('options' as const),
+  spin: q.get('spin') === 'hold' ? ('hold-to-spin' as const) : ('tap' as const),
+  currency: (q.get('currency') && CURRENCIES[q.get('currency')!] ? q.get('currency')! : 'USD'),
+  locale: q.get('locale') && MESSAGES[q.get('locale')!] ? q.get('locale')! : 'en',
+  // buy-feature: ?activation=single|multi (default multi) · ?blockbuy=1
+  activation: (q.get('activation') === 'single' ? 'single' : 'multi') as 'single' | 'multi',
+  blockBuy: q.get('blockbuy') === '1',
+};
+
+/** The whole HUD as one config object — the public surface a real slot would ship. */
+function buildSpec(): UISpec {
+  const cur = CURRENCIES[cfg.currency]!;
+  return {
+    // A bad ?accent is sanitized away (the preset accent shows through) — never broken.
+    theme: cfg.accent ? { preset: cfg.theme, overrides: { color: { accent: cfg.accent } } } : cfg.theme,
+    currency: cur.spec,
+    betLadder: { levels: [0.5, 1, 2, 5, 10, 20], index: 1 },
+    turbo: { modes: cfg.turbo },
+    autoplay: { mode: cfg.autoplay, options: [5, 10, 25, 50, 100, Infinity] },
+    spin: { press: cfg.spin },
+    // Desktop button layout CLONED from the reference UI design (Dev.svg): a bottom
+    // bar — balance · play · SPIN · turbo · bet (+ steppers to its right) — with the
+    // bonus on the right rail and the ☰ menu on the lower left. The design has no
+    // tilted buttons (rotation 0), but LayoutSpec.rotation now supports it. (Portrait
+    // reflows below; audio/rules live in the ☰ menu, not on a left rail.)
+    controls: {
+      spin: { layout: { anchor: 'bottom-center', offset: [0, -150], scale: 1.25, rotation: 0 } },
+      autoplay: { layout: { anchor: 'bottom-center', offset: [-240, -140] } },
+      turbo: { layout: { anchor: 'bottom-center', offset: [240, -140] } },
+      balance: { layout: { anchor: 'bottom-left', offset: [185, -62] } },
+      bet: { layout: { anchor: 'bottom-right', offset: [-330, -62] } },
+      'bet-plus': { layout: { anchor: 'bottom-right', offset: [-118, -92] } },
+      'bet-minus': { layout: { anchor: 'bottom-right', offset: [-118, -40] } },
+      bonus: { layout: { anchor: 'bottom-right', offset: [-208, -210] } },
+      settings: { layout: { anchor: 'bottom-left', offset: [95, -135] } },
+    },
+    // The unified ☰ menu — every part is a modular, configurable BLOCK: a banner
+    // image, a divider+settings, a multiplier paytable with symbol icons, and rules
+    // with bold inline text + a stat grid + a callout. All localizable; images use
+    // placehold.co so the desired dimensions/resolutions show even offline.
+    menu: {
+      banner: { src: 'https://placehold.co/1000x120/1f2430/ffd166?text=Scrolls+of+Fate', width: 1000, height: 120 },
+      settings: [
+        { kind: 'toggle', id: 'quick', label: 'Quick spin' },
+        { kind: 'select', id: 'gfx', label: 'Graphics', index: 2, options: [
+          { value: 'low', label: 'Low' }, { value: 'med', label: 'Medium' }, { value: 'high', label: 'High' },
+        ] },
+      ],
+      // A 3-column multiplier grid with symbol icons (placehold.co → real dimensions).
+      paytable: [
+        { kind: 'paytable', id: 'pt', columns: 3, rows: [
+          { symbol: 'Wild', icon: 'https://placehold.co/72x72/ef4444/ffffff?text=W', payouts: '8-9: 10.00x\n10-11: 25.00x\n12+: 50.00x' },
+          { symbol: 'Scatter', icon: 'https://placehold.co/72x72/3b82f6/ffffff?text=S', payouts: '8-9: 8.00x\n10-11: 20.00x\n12+: 40.00x' },
+          { symbol: 'Star', icon: 'https://placehold.co/72x72/f59e0b/000000?text=ST', payouts: '8-9: 6.00x\n10-11: 15.00x\n12+: 30.00x' },
+          { symbol: 'Ace', icon: 'https://placehold.co/72x72/22c55e/ffffff?text=A', payouts: '8-9: 5.00x\n10-11: 12.00x\n12+: 25.00x' },
+          { symbol: 'King', icon: 'https://placehold.co/72x72/a855f7/ffffff?text=K', payouts: '8-9: 2.00x\n10-11: 6.00x\n12+: 12.00x' },
+          { symbol: 'Queen', icon: 'https://placehold.co/72x72/ec4899/ffffff?text=Q', payouts: '8-9: 1.50x\n10-11: 4.00x\n12+: 8.00x' },
+        ] },
+      ],
+      // A rich rules section showing off the whole block palette — defined once in
+      // content.ts and shared with the HTML menu, so both render identical, fully
+      // localized content (the English text doubles as the i18n key).
+      rules: RULES_BLOCKS,
+    },
+    // 10-locale dictionary + starting locale; a Language switch appears in Settings.
+    locale: { messages: MESSAGES, locale: cfg.locale },
+    // Reflow the bottom bar for narrow screens, and drop the bonus button on phones.
+    responsive: {
+      portrait: {
+        controls: {
+          spin: { layout: { anchor: 'bottom-center', offset: [0, -470] } },
+          autoplay: { layout: { anchor: 'bottom-center', offset: [-150, -250] } },
+          turbo: { layout: { anchor: 'bottom-center', offset: [150, -250] } },
+          bonus: { layout: { anchor: 'bottom-center', offset: [-330, -250] } },
+          'bet-minus': { layout: { anchor: 'bottom-center', offset: [-150, -110] } },
+          'bet-plus': { layout: { anchor: 'bottom-center', offset: [150, -110] } },
+          settings: { layout: { anchor: 'bottom-center', offset: [330, -250] } },
+          balance: { layout: { anchor: 'bottom-left', offset: [180, -40] } },
+          bet: { layout: { anchor: 'bottom-right', offset: [-180, -40] } },
+        },
+      },
+      mobile: { controls: { bonus: { hidden: true } } },
+    },
+  };
+}
+
+async function main(): Promise<void> {
+  const app = new Application();
+  await app.init({
+    backgroundAlpha: 0, // transparent canvas → the page's themed background shows through
+    resizeTo: window,
+    antialias: true,
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    autoDensity: true,
+  });
+  document.body.appendChild(app.canvas);
+  app.canvas.style.outline = 'none';
+
+  const reels = buildReels();
+  app.stage.addChild(reels.container);
+
+  // ---- load the bundled SVG art ----
+  const load = async (src: string): Promise<Texture> => {
+    const t = await Assets.load<Texture>({ src, data: { resolution: 3 } });
+    t.source.autoGenerateMipmaps = true;
+    t.source.style.scaleMode = 'linear';
+    t.source.style.mipmapFilter = 'linear';
+    t.source.update();
+    return t;
+  };
+  const spinDefault = await load('/spin/default.svg');
+  const spinAuto = await load('/spin/auto.svg');
+  const menuTex = await load('/icons/menu.svg');
+  const [menuIdle, menuClose] = sliceRows(menuTex, 2);
+  const rulesTex = await load('/icons/rules.svg');
+  const musicTrack = await load('/icons/slider-music-track.svg');
+  const soundTrack = await load('/icons/slider-sound-track.svg');
+  const turboTex = await load('/icons/turbo.svg');
+  const [turboOff, turboOn] = sliceRows(turboTex, 2);
+  const autoTex = await load('/icons/auto.svg');
+  const autoFrames = sliceRows(autoTex, 4);
+  const bonusTex = await load('/icons/bonus.svg');
+  const plusTex = await load('/icons/plus.svg');
+  const minusTex = await load('/icons/minus.svg');
+
+  // ---- mount the whole HUD in ONE call (Charter B9) ----
+  const hud = mountHud(app, buildSpec(), {
+    expose: true,
+    menu: false, // the one biased menu design is the HTML one, mounted below
+    spinSkin: () => svgSpinSkin({ default: spinDefault, auto: spinAuto }),
+    icons: {
+      settingsIdle: menuIdle,
+      settingsActive: menuClose,
+      close: menuClose,
+      rules: rulesTex,
+      sliderMusic: musicTrack,
+      sliderSound: soundTrack,
+      turboOff,
+      turboOn,
+      // 3-mode turbo reuses the off/on art + the built-in level pips overlay
+      autoIdle: autoFrames[0],
+      autoActive: autoFrames[2],
+      bonus: bonusTex,
+      betPlus: plusTex,
+      betMinus: minusTex,
+    },
+  });
+  const ui = hud.ui;
+  mountHtmlMenu(app, hud);
+  // Buy-feature modal (opened by the bonus coin). Buying CLOSES it and the host
+  // deducts the cost + would start the feature; activating a bet boost keeps it
+  // open. Activation is configurable (single/multi, blocks-buy) via the URL.
+  mountBuyFeatureModal(app, hud, FEATURES, {
+    activation: cfg.activation,
+    activationBlocksBuy: cfg.blockBuy,
+    onBuy: (id, cost) => {
+      const dec = ui.balance.currency.get().decimals;
+      const p = 10 ** dec;
+      ui.balance.set(Math.max(0, Math.round((ui.balance.get() - cost) * p) / p)); // deduct
+      console.log(`[demo] bought "${id}" for ${cost} — running the feature…`);
+      // a real game would now run the bought feature (e.g. free spins)
+    },
+    onActivate: (activeIds) => console.log('[demo] active boosts:', activeIds),
+  });
+
+  const start = CURRENCIES[cfg.currency]!;
+  ui.balance.set(start.balance);
+
+  // ---- talk to it from the outside: events out, façade in ----
+  const round = (x: number, d: number): number => {
+    const p = 10 ** d;
+    return Math.round(x * p) / p;
+  };
+  const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+  const turboEngaged = (): boolean => ui.turbo.isOn;
+
+  /** One round, driven by the host. `turbo` shortens the reel spin. */
+  async function playSpin(turbo = turboEngaged()): Promise<void> {
+    const dec = ui.balance.currency.get().decimals;
+    ui.spin.busy();
+    ui.balance.set(round(ui.balance.get() - ui.bet.get(), dec));
+    await reels.spin(app, turbo);
+    const win = Math.random() < 0.45 ? round(ui.bet.get() * (1 + Math.random() * 24), dec) : 0;
+    if (win > 0) ui.balance.set(round(ui.balance.get() + win, dec));
+  }
+
+  ui.on('spinRequested', async () => {
+    await playSpin();
+    ui.spin.stopState();
+    await wait(turboEngaged() ? 120 : 420);
+    ui.spin.idle();
+  });
+  ui.on('skipRequested', () => reels.skip());
+
+  // autoplay: the host runs the loop; open-ui owns the picker + live count
+  ui.on('autoplayStarted', async ({ count }) => {
+    let left = count;
+    while (ui.autoplay.isActive && left > 0) {
+      ui.autoplay.setCount(left);
+      await playSpin();
+      ui.spin.idle();
+      if (left !== Infinity) left -= 1;
+      await wait(turboEngaged() ? 120 : 240);
+    }
+    if (ui.autoplay.isActive) ui.autoplay.stop();
+  });
+
+  // hold-to-spin: turbo-spin on a loop while the button is held
+  let holding = false;
+  ui.on('holdSpinStarted', async () => {
+    holding = true;
+    while (holding) {
+      await playSpin(true);
+      ui.spin.idle();
+      await wait(90);
+    }
+  });
+  ui.on('holdSpinStopped', () => {
+    holding = false;
+  });
+
+  // ---- a few keyboard conveniences (the demo, not the library) ----
+  window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'a') ui.spin.current === 'auto' ? ui.spin.idle() : ui.spin.auto();
+    else if (k === '+' || k === '=') ui.betStepper.inc();
+    else if (k === '-') ui.betStepper.dec();
+    else if (k === 't') ui.turbo.cycle();
+    else if (k === '2') ui.turbo.setModes(['off', 'on']);
+    else if (k === '3') ui.turbo.setModes(['off', 'turbo', 'super']);
+  });
+
+  (window as unknown as Record<string, unknown>).ui = ui;
+
+  // center the reels on resize
+  const layoutReels = (): void => reels.layout(app.screen.width, app.screen.height);
+  app.renderer.on('resize', layoutReels);
+  layoutReels();
+
+  // ---- tiny legend (host chrome, not part of open-ui) ----
+  const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFractionDigits: 8 });
+  const drawLegend = (): void => {
+    if (document.body.classList.contains('bare')) return;
+    const s = ui.screen.get();
+    const code = ui.balance.currency.get().code;
+    legendEl.innerHTML =
+      `<b>open-ui</b> · example client\n` +
+      `theme   <span class="k">${String(cfg.theme)}</span>\n` +
+      `turbo   <span class="k">${ui.turbo.modeCount}-mode</span> · <span class="k">${ui.turbo.mode}</span>\n` +
+      `auto    <span class="k">${ui.autoplay.mode}</span>\n` +
+      `spin    <span class="k">${cfg.spin}</span>\n` +
+      `locale  <span class="k">${ui.locale.get()}</span>\n` +
+      `screen  <span class="k">${s.breakpoint}/${s.orientation}</span>\n` +
+      `balance <span class="k">${fmt(ui.balance.get())} ${code}</span>\n` +
+      `<span class="d">keys: A auto · ± bet · T turbo · 2/3 modes</span>`;
+  };
+  app.ticker.add(drawLegend);
+}
+
+/** A throwaway placeholder "game": a 5×3 grid that shuffles while spinning. */
+function buildReels(): {
+  container: Container;
+  layout: (w: number, h: number) => void;
+  spin: (app: Application, turbo?: boolean) => Promise<void>;
+  skip: () => void;
+} {
+  const COLS = 5;
+  const ROWS = 3;
+  const CELL = 150;
+  const GAP = 14;
+  const PALETTE = [0x4cc9f0, 0xf72585, 0xffc935, 0x80ed99, 0xb5179e];
+
+  const container = new Container();
+  const grid = new Container();
+  container.addChild(grid);
+
+  const pips: Graphics[] = [];
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      const cell = new Container();
+      cell.x = c * (CELL + GAP);
+      cell.y = r * (CELL + GAP);
+      const bg = new Graphics();
+      bg.roundRect(0, 0, CELL, CELL, 16).fill({ color: 0x161b22 }).stroke({ width: 2, color: 0x222b36 });
+      const pip = new Graphics();
+      pip.x = CELL / 2;
+      pip.y = CELL / 2;
+      drawPip(pip, PALETTE[(c + r) % PALETTE.length] ?? 0xffffff);
+      cell.addChild(bg, pip);
+      grid.addChild(cell);
+      pips.push(pip);
+    }
+  }
+
+  const gridW = COLS * CELL + (COLS - 1) * GAP;
+  const gridH = ROWS * CELL + (ROWS - 1) * GAP;
+
+  const layout = (w: number, h: number): void => {
+    const portrait = w / h < 0.85;
+    const scale = Math.min(portrait ? (w * 0.92) / gridW : (w * 0.62) / gridW, (h * 0.42) / gridH);
+    container.scale.set(scale);
+    container.x = (w - gridW * scale) / 2;
+    container.y = (h - gridH * scale) / 2 - h * (portrait ? 0.16 : 0.12);
+  };
+
+  let skipFlag = false;
+  const shuffle = (): void => {
+    for (const pip of pips) drawPip(pip, PALETTE[Math.floor(Math.random() * PALETTE.length)] ?? 0xffffff);
+  };
+  const spin = (app: Application, turbo = false): Promise<void> =>
+    new Promise<void>((resolve) => {
+      skipFlag = false;
+      let elapsed = 0;
+      let acc = 0;
+      const duration = turbo ? 360 : 1100;
+      const step = turbo ? 45 : 70;
+      const fn = (): void => {
+        const dt = app.ticker.deltaMS;
+        elapsed += dt;
+        acc += dt;
+        if (acc > step) {
+          acc = 0;
+          shuffle();
+        }
+        if (elapsed >= duration || skipFlag) {
+          app.ticker.remove(fn);
+          shuffle();
+          resolve();
+        }
+      };
+      app.ticker.add(fn);
+    });
+  const skip = (): void => {
+    skipFlag = true;
+  };
+
+  return { container, layout, spin, skip };
+}
+
+function drawPip(g: Graphics, color: number): void {
+  g.clear();
+  g.roundRect(-44, -44, 88, 88, 14).fill({ color });
+}
+
+/** Slice a vertically-stacked icon sheet (e.g. Menu = [☰, ✕]) into frames. */
+function sliceRows(tex: Texture, rows: number): Texture[] {
+  const src = tex.source;
+  const rh = src.height / rows;
+  return Array.from({ length: rows }, (_, i) => new Texture({ source: src, frame: new Rectangle(0, i * rh, src.width, rh) }));
+}
+
+void main();

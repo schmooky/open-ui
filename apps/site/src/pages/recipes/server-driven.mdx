@@ -1,0 +1,55 @@
+---
+layout: ../../layouts/Docs.astro
+title: Drive it from a server
+section: recipes
+eyebrow: Recipe
+description: Server-authoritative display — the UI shows values the host sets and never computes money.
+---
+
+open-ui is **server-authoritative** (Charter&nbsp;P11): it *displays* values the
+host sets and never computes money or outcomes. The host owns the truth; the UI
+shows it.
+
+## The recipe
+
+```ts
+ui.on('spinRequested', async () => {
+  ui.spin.busy();
+
+  // 1. optimistic stake (display only — the server is still the source of truth)
+  const dec = ui.balance.currency.get().decimals;
+  ui.balance.set(round(ui.balance.get() - ui.bet.get(), dec));
+
+  // 2. the authoritative round
+  const round = await rgs.spin({ bet: ui.bet.get() });
+
+  // 3. reconcile to the server's numbers
+  ui.balance.set(round.balanceAfter);     // server value, not a local sum
+  if (round.win > 0) ui.balance.set(round.balanceAfter);
+
+  ui.spin.stopState();
+  ui.spin.idle();
+});
+```
+
+## Currency & formatting
+
+Values are displayed through the control's currency spec, so switching currency
+(fiat ↔ crypto) is a display concern only:
+
+```ts
+ui.balance.setCurrency({ code: 'BTC', decimals: 8 });
+ui.bet.setCurrency({ code: 'BTC', decimals: 8 });
+ui.balance.set(1.23456789);
+```
+
+## Why it can't desync
+
+The UI never adds bets or computes payouts; it renders what the host hands it.
+Combined with the disposer-enforced lifecycle, the display can't drift from the
+server or leak between rounds (Charter&nbsp;G7).
+
+## See also
+
+- [Run an autoplay loop](/recipes/autoplay-loop/)
+- [Events](/docs/events/)

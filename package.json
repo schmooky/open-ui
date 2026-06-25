@@ -1,0 +1,18 @@
+{
+  "name": "open-ui-workspace",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "pnpm --dir examples/demo dev",
+    "build": "pnpm --filter @open-ui/core build && pnpm --filter @open-ui/pixi build",
+    "build:demo": "pnpm --dir examples/demo build",
+    "test": "pnpm --filter @open-ui/core test",
+    "typecheck": "tsc -p packages/core/tsconfig.json && tsc -p packages/pixi/tsconfig.json && tsc -p examples/demo/tsconfig.json",
+    "release": "pnpm build && pnpm -r publish --access public --no-git-checks",
+    "release:dry": "pnpm build && pnpm -r publish --dry-run --no-git-checks"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

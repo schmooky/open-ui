@@ -1,0 +1,84 @@
+---
+layout: ../../layouts/Docs.astro
+title: Responsive layout
+section: guides
+eyebrow: Make it yours
+description: Placement declared as data — anchor, offset, scale — resolved against the live screen, with per-device and per-orientation overrides. No magic numbers.
+---
+
+Responsive behaviour is **declared as data**, not buried in components
+(Charter&nbsp;P9). Each control carries a `LayoutSpec`; a layout resolver turns it
+into a concrete position against the current `ScreenState`, which re-resolves on
+every resize.
+
+## A control's layout is data
+
+```ts
+interface LayoutSpec {
+  anchor: Anchor;            // a 9-point grid
+  offset?: [number, number]; // reference px from that anchor (scaled to fit)
+  scale?: number;            // extra multiplier
+}
+
+type Anchor =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'center-left' | 'center' | 'center-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+```
+
+For example, the spin button is `{ anchor: 'bottom-center', offset: [0, -440] }`
+and the balance is `{ anchor: 'bottom-left', offset: [220, -96] }`.
+
+## Resize just works
+
+The renderer subscribes to `app.renderer.on('resize')` and calls
+`ui.setScreen(width, height)`. That recomputes a `ScreenState` — orientation, a
+named breakpoint and a fit-scale — and every view re-applies its layout. No
+`setTimeout`-based settling, no manual repositioning.
+
+## The ScreenState: orientation + breakpoint
+
+```ts
+interface ScreenState {
+  width: number; height: number;
+  orientation: 'landscape' | 'portrait';
+  breakpoint:  'mobile' | 'tablet' | 'desktop';
+  scale: number;   // multiply reference-px sizes to fit
+}
+```
+
+The breakpoint is read from the **shorter screen edge** so a phone stays `'mobile'`
+in both orientations — the right intuition for "what device is this". Thresholds
+default to `≤ 480` mobile, `≤ 840` tablet, else desktop, and are configurable via
+`layout.breakpoints`.
+
+## Restyle per device — `responsive`
+
+The cleanest way to reflow is the [`responsive`](/guides/configuration/#responsive--per-device--orientation)
+config. Key overrides by **device size** or **orientation**; they re-apply on every
+resize, layered base → orientation → size:
+
+```ts
+mountHud(app, {
+  responsive: {
+    portrait: { controls: { spin: { layout: { anchor: 'bottom-center', offset: [0, -470] } } } },
+    mobile:   { controls: { bonus: { hidden: true } } },   // drop on phones
+  },
+});
+```
+
+Hidden controls stay registered (still in `snapshot()`); they're just not drawn.
+
+## Or nudge one control directly
+
+Placement is just data on the control, so a game can move any control imperatively:
+
+```ts
+hud.ui.bonusButton.layout = { anchor: 'top-right', offset: [-32, 32] };
+hud.ui.setScreen(app.screen.width, app.screen.height); // re-resolve
+```
+
+## Next
+
+- [Configuration](/guides/configuration/) — the full `responsive` reference
+- [Theming by tokens](/guides/theming/) — colour & motion as data

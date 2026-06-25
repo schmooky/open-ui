@@ -1,0 +1,79 @@
+---
+layout: ../../layouts/Docs.astro
+title: Read state in an e2e test
+section: recipes
+eyebrow: Recipe
+description: Query state, interactability and screen bounds from window.__OPENUI__ — no pixel-matching, no flaky waits.
+---
+
+When mounted with `expose: true` (the default), open-ui attaches a stable API to
+`window.__OPENUI__`. Tests answer "what state, can the player act, where is it?"
+without reading a pixel (Charter&nbsp;P10/G6).
+
+## The surface
+
+```ts
+window.__OPENUI__.snapshot();              // ControlSnapshot[]
+window.__OPENUI__.getState(id);            // string | null
+window.__OPENUI__.isInteractable(id);      // boolean (derived)
+window.__OPENUI__.bounds(id);              // { x, y, width, height } | null
+```
+
+## A Playwright test
+
+```ts
+import { test, expect } from '@playwright/test';
+
+test('spin disables itself while spinning', async ({ page }) => {
+  await page.goto('/game');
+
+  expect(await page.evaluate(() => window.__OPENUI__.getState('spin'))).toBe('idle');
+
+  // click by real screen rect — no image matching
+  const b = await page.evaluate(() => window.__OPENUI__.bounds('spin'));
+  await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+
+  await expect
+    .poll(() => page.evaluate(() => window.__OPENUI__.isInteractable('spin')))
+    .toBe(false);
+});
+```
+
+## Waiting on animation, not timeouts
+
+`snapshot()` reports `animating` per control; it flips to `false` when the
+transition's promise resolves. Poll it instead of guessing a `waitForTimeout`:
+
+```ts
+await expect
+  .poll(() => page.evaluate(() =>
+    window.__OPENUI__.snapshot().find((s) => s.id === 'spin')?.animating))
+  .toBe(false);
+```
+
+## TypeScript
+
+Add the type for `window.__OPENUI__` in a `.d.ts`:
+
+```ts
+interface OpenUiSnapshot {
+  id: string; role: string; state: string;
+  interactable: boolean; animating: boolean;
+  bounds: { x: number; y: number; width: number; height: number } | null;
+}
+declare global {
+  interface Window {
+    __OPENUI__: {
+      snapshot(): OpenUiSnapshot[];
+      getState(id: string): string | null;
+      isInteractable(id: string): boolean;
+      bounds(id: string): OpenUiSnapshot['bounds'];
+    };
+  }
+}
+export {};
+```
+
+## See also
+
+- [Introspection & testing](/guides/testing/)

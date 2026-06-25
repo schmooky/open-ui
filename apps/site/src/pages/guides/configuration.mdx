@@ -1,0 +1,197 @@
+---
+layout: ../../layouts/Docs.astro
+title: Configuration
+section: guides
+eyebrow: Start here
+description: One JSON spec sets how the whole HUD looks and behaves — theme, turbo modes, autoplay style, spin behavior and per-device layout. Every option is a string literal, so a typo is a compile error.
+---
+
+The whole HUD is one **`UISpec`** — a plain, JSON-serializable object you pass to
+`mountHud(app, spec)`. Every field is optional; omit one and you get the sensible
+default. It's fully typed, so your editor autocompletes the options and a typo
+won't compile.
+
+```ts
+import { mountHud } from '@open-ui/pixi';
+
+const hud = mountHud(app, {
+  theme: 'midnight',
+  turbo:    { modes: 3 },
+  autoplay: { mode: 'options' },
+  spin:     { press: 'hold-to-spin' },
+});
+```
+
+`mountHud()` with no spec gives you the reference HUD. Everything below is opt-in.
+
+## Theme
+
+```ts
+theme: 'default' | 'midnight' | 'neon'
+// or, to tweak a preset (overrides are a SAFE, curated subset):
+theme: { preset: 'neon', overrides: { color: { accent: '#ff4d6d' }, radius: { card: 20 } } }
+```
+
+Three presets ship in the box. Overrides are limited to colours, corner radii and
+the font family, and every value is validated — a bad colour falls back to the
+token, so a theme can restyle the HUD but **cannot break it**. See
+[Theming](/guides/theming/).
+
+## Turbo — 2-mode or 3-mode
+
+The single Turbo control is a 2-mode toggle **or** a 3-mode switcher, by config.
+Each press advances to the next mode and wraps back to off.
+
+| `turbo.modes` | Result | Cycle |
+| --- | --- | --- |
+| `2` *(default)* | off / on toggle | off → on → off |
+| `3` | three-mode switcher | off → turbo → super → off |
+| `['off','fast','ludicrous']` | your own ladder (first = off) | off → fast → ludicrous → off |
+
+```ts
+turbo: { modes: 3, index: 0 }   // start at "off"
+```
+
+The renderer draws a small level indicator (lit pips) for 3+ modes, so "turbo" vs
+"super" reads at a glance even on 2-frame art. Each change emits a `turboChanged`
+event (plus a back-compatible `toggled`).
+
+## Autoplay — options drawer or infinite
+
+```ts
+autoplay: {
+  mode: 'options' | 'infinite',   // default 'options'
+  options: [5, 10, 25, 50, 100, Infinity],
+}
+```
+
+- **`'options'`** — tapping autoplay slides a **drawer up from the bottom** with
+  the count choices and a **Start** button. Pick a count, press Start.
+- **`'infinite'`** — tapping starts infinite autoplay immediately; tap again to
+  stop. No picker.
+
+`Infinity` in `options` renders as **∞**. The library owns the picker and the live
+remaining count; **your game runs the loop** and feeds it via `hud.ui.autoplay.setCount(n)`.
+See the [autoplay recipe](/recipes/autoplay-loop/).
+
+## Spin — tap or hold-to-spin
+
+```ts
+spin: { press: 'tap' | 'hold-to-spin' }   // default 'tap'
+```
+
+With **`'hold-to-spin'`**, holding the spin button fires `holdSpinStarted`; your
+game turbo-spins on a loop until release, which fires `holdSpinStopped`. A quick
+tap still spins once. (The library signals intent; the host runs the loop — same
+pattern as autoplay.)
+
+```ts
+hud.on('holdSpinStarted', () => turboLoop.start());
+hud.on('holdSpinStopped', () => turboLoop.stop());
+```
+
+## Responsive — per device & orientation
+
+Layer overrides on top of the base layout, keyed by **device size** (`mobile`,
+`tablet`, `desktop`) or **orientation** (`portrait`, `landscape`). They re-apply on
+every resize, so the HUD can reflow or drop controls per screen.
+
+```ts
+responsive: {
+  portrait: {
+    controls: {
+      spin:    { layout: { anchor: 'bottom-center', offset: [0, -470] } },
+      autoplay:{ layout: { anchor: 'bottom-center', offset: [-150, -250] } },
+    },
+  },
+  mobile: { controls: { bonus: { hidden: true } } },  // drop the bonus button on phones
+}
+```
+
+Order of precedence is **base → orientation → size** (size wins). Device size is
+read from the **shorter screen edge** (`≤ 480` mobile, `≤ 840` tablet, else desktop —
+configurable via `layout.breakpoints`), so a phone stays "mobile" in both
+orientations. See [Responsive layout](/guides/layout/).
+
+## Money — currency & bet ladder
+
+```ts
+currency: { code: 'BTC', decimals: 8 },          // sets balance + bet at once
+betLadder: { levels: [0.5, 1, 2, 5, 10, 20], index: 1 },
+```
+
+`decimals` up to 8 (crypto-friendly); bad host amounts are clamped, never
+rejected, so a stray value can't corrupt the display.
+
+## Per-control overrides
+
+Target any control by id to move it, hide it, disable it, or relabel it:
+
+```ts
+controls: {
+  bonus: { hidden: true },
+  turbo: { disabled: true },
+  spin:  { layout: { anchor: 'bottom-center', offset: [0, -440] } },
+}
+```
+
+Hidden controls stay **registered** — still in `snapshot()` for tests — they're
+just not drawn.
+
+## The menu — one scrollable sheet
+
+The ☰ button opens a single scrollable menu with three sections, in order:
+**Settings → Paytable → Rules**. Music + Sound (and a Language switch, when 2+
+locales are set) ship out of the box; you add your own.
+
+```ts
+menu: {
+  banner: { src: '/art/title.png', width: 560, height: 96 },        // themed header art
+  settings: [{ kind: 'toggle', id: 'quick', label: 'Quick spin' }], // appended to Music/Sound
+  paytable: [{
+    kind: 'paytable', id: 'pt', columns: 2,                         // a multi-column grid
+    rows: [{ symbol: 'Wild', icon: '/art/wild.png', payouts: '8-9: 10x\n10-11: 25x\n12+: 50x' }],
+  }],
+  rules: [
+    { kind: 'text', id: 'r', text: 'Match symbols to win — **bigger symbols pay more**.' }, // **bold** inline
+    { kind: 'stat-grid', id: 's', items: [{ label: 'RTP', value: '96.50%' }, { label: 'Max win', value: '5,000x' }] },
+    { kind: 'callout', id: 't', tone: 'bonus', title: 'Tip', text: 'Hold spin for turbo.' },
+  ],
+},
+```
+
+**Everything is a declarative block** — a discriminated union (`slider`, `toggle`,
+`select`, `stepper`, `heading`, `text`, `callout`, `stat-grid`, `steps`,
+`paytable`, `image`), so "shown but no payload" can't compile. Headings render as a
+centered divider; `text`/paytable payouts support `**bold**`; paytable takes a
+`columns` grid with per-symbol `icon`s; every block's text flows through `ui.t`, so
+the whole menu localizes.
+
+<img src="/hero/menu.png" alt="The unified scrollable menu, localized to Japanese" width="1440" height="900" style="border-radius:12px;border:1px solid var(--border);margin-top:1rem" />
+
+## i18n — localize safely
+
+Pass a dictionary and starting locale; a Language switch appears in the menu
+automatically.
+
+```ts
+locale: { messages: { de: { Balance: 'Guthaben', Bet: 'Einsatz' } }, locale: 'en' },
+```
+
+`hud.ui.setLocale('de')` re-renders every label. **Keys fall through**, so a partial
+dictionary can never produce blank or broken UI — it just shows the key. (The
+example client ships a 10-locale dictionary, screenshotted by a Playwright matrix.)
+
+## It never throws
+
+The spec is validated on mount. Problems are **reported, not fatal** — a malformed
+HUD still boots with the bad pieces dropped. Catch issues in development:
+
+```ts
+mountHud(app, spec, { hooks: { onDataIssue: (i) => console.warn(i.code, i.message) } });
+```
+
+## Next
+
+- [Theming](/guides/theming/) · [Responsive layout](/guides/layout/) · [Testing](/guides/testing/)
+- [API reference](/docs/openui/) — the façade and events in full

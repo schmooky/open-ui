@@ -1,0 +1,87 @@
+---
+import Base from '../layouts/Base.astro';
+
+const postulates = [
+  ['P1', 'Biased, not neutral', 'A stateful, opinionated UI with M-V-C inside it. The game talks to it, never through it.'],
+  ['P2', 'One mount, zero hand-wiring', 'A single mount() injects one root layer. unmount() removes every listener, tween and timer — and leaks nothing.'],
+  ['P3', 'Headless core, swappable renderer', 'All state, logic, layout math, theming and the test contract live in renderer-agnostic @open-ui/core.'],
+  ['P4', 'Narrow typed façade; never reached into', 'The game drives via typed commands and listens via a typed bus. This boundary is the whole product.'],
+  ['P5', 'Every control is a state machine', 'State is the single source of truth for look, interactivity, and tests. No second place decides "is it disabled?".'],
+  ['P6', 'Interactability is derived, never stored', 'A computed function of state and host gates — not a pile of per-button booleans to keep in sync.'],
+  ['P7', 'Everything is swappable by class', 'Every control resolves from a registry. Replace any with your class, a Spine, or a tap-area. Defaults always ship.'],
+  ['P8', 'Themeable by tokens, skinnable by renderer', 'Look is data: a token set with semantic aliases and safe fallbacks. Re-skin without touching logic.'],
+  ['P9', 'Layout is a pluggable strategy', 'Anchor, offset, scale, fit, orientation, safe-area — declared as data and resolved by a swappable strategy.'],
+  ['P10', 'Test hooks are first-class', 'A dev-gated API exposes every control’s id, role, state, interactability and bounds — plus an event log.'],
+  ['P11', 'Server-authoritative data flow', 'The UI displays values the host sets; it never computes money. Inbound data crosses one non-throwing boundary.'],
+  ['P12', 'Deterministic lifecycle, leak-free', 'Every subscription, handler, tween and timer returns a disposer, enforced by a base type.'],
+];
+
+const biases = [
+  ['B1', 'One typed event bus. Period.', 'Not callbacks-here and magic strings everywhere. One bus, fully typed payloads.'],
+  ['B2', 'One Container layer by default', 'Add one Container to your stage; share your ticker + renderer. Own-canvas overlay is opt-in.'],
+  ['B3', 'Dumb views, controller in the lib', 'Keep the clean dumb-view seam — but the binding controller lives inside open-ui, not your game.'],
+  ['B4', 'No DI container', 'Service-locators hide coupling and wreck testability. Narrow constructor injection + a typed registry instead.'],
+  ['B5', 'Framework-free core', 'A tiny dependency-free signal primitive. No MobX, no React imposed on the host.'],
+  ['B6', 'Composable, awaitable animations', 'Squish, Turn, Fade, Pulse + Sequence/Parallel. Re-triggering kills and replaces the running tween.'],
+  ['B7', 'A11y & test ids required', 'Every control must declare an id and role — the base type won’t compile without them.'],
+  ['B8', 'No host side effects in lib code', 'No secrets, no hidden network, no window.location.reload(). Host concerns are host-provided callbacks.'],
+  ['B9', 'Builder-first ergonomics', 'A fluent builder validates the whole UI at .build() and reduces wiring to ~10 lines.'],
+  ['B10', 'Illegal states unrepresentable', 'English-only identifiers; discriminated-union states, so "shown but no payload" can’t be expressed.'],
+];
+
+const guarantees = [
+  ['G1', 'Drop-in, one layer, no rewrite'],
+  ['G2', 'Shares your Pixi, doesn’t fight it'],
+  ['G3', 'Resize just works'],
+  ['G4', 'Swap anything without forking'],
+  ['G5', 'Theme in minutes'],
+  ['G6', 'Your QA team will thank you'],
+  ['G7', 'Can’t desync your balance or leak'],
+  ['G8', 'Won’t lie about its state'],
+  ['G9', 'Stays out of your way'],
+  ['G10', 'Predictable, OOP, extensible'],
+];
+---
+<Base title="The Charter · open-ui" description="open-ui's doctrine: 12 postulates, 10 biases, and 10 guarantees, grounded in a teardown of four shipped studio codebases.">
+  <div class="container max-w-5xl py-12">
+    <div class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Doctrine</div>
+    <h1 class="text-4xl font-semibold tracking-tight">The Charter</h1>
+    <p class="mt-4 max-w-3xl text-lg leading-8 text-muted-foreground">
+      The doctrine the whole library is measured against, grounded in a teardown of four shipped studio codebases
+      plus the <code class="rounded bg-muted px-1.5 py-0.5 text-sm">pixi-reels</code> engine. The postulates are
+      non-negotiable axioms; the biases are the opinions we take so you don’t have to; the guarantees are the contract.
+    </p>
+
+    <h2 class="mt-14 text-2xl font-semibold tracking-tight">Postulates <span class="text-muted-foreground">— non-negotiable axioms</span></h2>
+    <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {postulates.map(([n, t, b]) => (
+        <div class="rounded-xl border border-border bg-card p-5">
+          <div class="font-mono text-xs font-semibold text-[#caa000] dark:text-[#ffc935]">{n}</div>
+          <div class="mt-1 font-semibold tracking-tight">{t}</div>
+          <p class="mt-2 text-sm leading-6 text-muted-foreground">{b}</p>
+        </div>
+      ))}
+    </div>
+
+    <h2 class="mt-14 text-2xl font-semibold tracking-tight">Core biases <span class="text-muted-foreground">— the opinions we take</span></h2>
+    <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {biases.map(([n, t, b]) => (
+        <div class="rounded-xl border border-border bg-card p-5">
+          <div class="font-mono text-xs font-semibold text-muted-foreground">{n}</div>
+          <div class="mt-1 font-semibold tracking-tight">{t}</div>
+          <p class="mt-2 text-sm leading-6 text-muted-foreground">{b}</p>
+        </div>
+      ))}
+    </div>
+
+    <h2 class="mt-14 text-2xl font-semibold tracking-tight">Core guarantees <span class="text-muted-foreground">— the contract</span></h2>
+    <div class="mt-5 grid gap-3 sm:grid-cols-2">
+      {guarantees.map(([n, t]) => (
+        <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+          <span class="font-mono text-xs font-semibold text-muted-foreground">{n}</span>
+          <span class="text-sm font-medium">{t}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</Base>

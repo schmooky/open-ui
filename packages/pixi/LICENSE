@@ -19,3 +19,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Bundled software
+
+This package's distributed bundle includes the following third-party software:
+
+### pixi-text-counter
+
+The mechanical-reel value counter is compiled into this package's `dist`.
+
+  MIT License — Copyright (c) schmooky
+  https://github.com/schmooky/pixi-text-counter

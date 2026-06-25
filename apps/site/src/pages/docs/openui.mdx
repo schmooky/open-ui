@@ -1,0 +1,105 @@
+---
+layout: ../../layouts/Docs.astro
+title: Mount & façade
+section: docs
+eyebrow: API reference
+description: mountHud boots the whole HUD in one call; the OpenUI façade it returns owns the control tree, theme, screen state and typed event bus.
+---
+
+## mountHud — the one-call entry
+
+`mountHud` (from `@open-ui/pixi`) builds, configures and mounts the entire HUD,
+returning a `BootedHud` handle with the day-to-day game verbs.
+
+```ts
+import { mountHud } from '@open-ui/pixi';
+
+const hud = mountHud(app, spec?, opts?);
+```
+
+| Member | Signature | Notes |
+|---|---|---|
+| `ui` | `OpenUI` | The headless façade (handles + events). |
+| `on` | `on(type, fn): Dispose` | Subscribe to a [bus event](/docs/events/). |
+| `setBalance` / `setBet` | `(major: number): void` | Update the money displays. |
+| `setCurrency` | `(spec): void` | Re-format balance + bet. |
+| `snapshot` | `(): ControlSnapshot[]` | Serializable state of every control. |
+| `lockInput` / `unlockInput` | `(): void` | Ref-counted whole-HUD input lock. |
+| `dispose` | `(): void` | Remove the layer + every listener, tween and timer. |
+
+The `spec` is the [`UISpec`](/guides/configuration/); `opts` carries renderer art
+(`icons`, `spinSkin`, `controlSkins`) and `hooks`. Prefer `mountHud` — drop to the
+classes below only for custom wiring.
+
+## createUI / OpenUI directly
+
+`createUI(spec)` assembles a configured headless `OpenUI` (no renderer);
+`new OpenUIPixi(ui).mount(app)` binds the PixiJS view. `mountHud` is just these
+two composed.
+
+```ts
+import { createUI } from '@open-ui/core';
+import { OpenUIPixi } from '@open-ui/pixi';
+
+const ui = createUI({ theme: 'neon' });
+new OpenUIPixi(ui, { icons }).mount(app);
+```
+
+## Typed control handles
+
+The game accesses controls through named handles — never raw lookups:
+
+```ts
+ui.spin           // SpinControl
+ui.balance        // ValueDisplay
+ui.bet            // ValueDisplay
+ui.betStepper     // StepperControl
+ui.betPlus        // ButtonControl
+ui.betMinus       // ButtonControl
+ui.turbo          // TurboControl (2-mode or 3-mode)
+ui.autoplay       // AutoplayControl
+ui.bonusButton    // ButtonControl
+ui.settingsButton // ButtonControl
+ui.settingsPanel  // PanelControl (popover)
+ui.musicSlider    // SliderControl
+ui.sfxSlider      // SliderControl
+ui.rulesButton    // ButtonControl
+ui.infoPanel      // PanelControl (modal)
+ui.infoClose      // ButtonControl
+```
+
+## Methods
+
+| Member | Signature | Notes |
+|---|---|---|
+| `on` | `on(type, fn): Dispose` | Subscribe to a [bus event](/docs/events/). Returns a disposer. |
+| `setScreen` | `setScreen(w, h): void` | Recompute breakpoint + fit-scale. The renderer calls this on resize. |
+| `snapshot` | `snapshot(): ControlSnapshot[]` | Serializable state of every control (powers [testing](/guides/testing/)). |
+| `register` | `register(control): void` | Add a control to the registry (for custom controls). |
+| `control` | `control(id): Control \| undefined` | Look up a control by id. |
+| `all` | `all(): Control[]` | Every registered control. |
+| `setHidden` | `setHidden(id, hidden): void` | Show/hide a control at runtime (the responsive layer uses this). |
+| `lock` / `unlock` | `(): void` | Ref-counted input lock — every control reports not-interactable while locked. |
+| `setLocale` / `t` | `setLocale(loc)` · `t(key)` | Switch language; translate a key. |
+| `dispose` | `(): void` | Tear down every subscription and control. |
+
+## Properties
+
+```ts
+ui.theme         // Theme (readonly)
+ui.layoutConfig  // LayoutConfig (readonly)
+ui.bus           // EventBus<OpenUIEvents>
+ui.screen        // Signal<ScreenState>
+```
+
+## Built-in navigation
+
+`OpenUI` wires the obvious HUD navigation itself (it's a *biased* UI): the
+settings button toggles the settings popover, **Rules** opens the info modal, and
+the bet ± buttons drive the bet stepper, which drives the bet display. You get
+that for free — the game only handles domain intents like `spinRequested`.
+
+## Next
+
+- [Configuration](/guides/configuration/) — every option the spec exposes
+- [Events](/docs/events/) — the full typed bus

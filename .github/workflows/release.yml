@@ -1,0 +1,40 @@
+name: Release
+
+# Publishes @open-ui/core and @open-ui/pixi to npm when a v* tag is pushed:
+#   pnpm version 0.1.1 -m "release: %s"   # or bump the package.json versions
+#   git push --follow-tags
+#
+# Requires an NPM_TOKEN repo secret (an npm automation/granular token with
+# publish rights to the @open-ui scope).
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    name: build · test · publish to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # for npm provenance (optional — see below)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+      # Publishes every public workspace package (core first, then pixi) in
+      # dependency order, converting `workspace:*` to the real version. Private
+      # packages (demo, site, vendor) are skipped automatically.
+      - run: pnpm -r publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Uncomment to attach build provenance (needs a public GitHub repo):
+          # NPM_CONFIG_PROVENANCE: 'true'

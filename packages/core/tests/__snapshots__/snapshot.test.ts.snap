@@ -1,0 +1,102 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OpenUI.snapshot() > matches the documented initial control surface 1`] = `
+[
+  {
+    "id": "autoplay",
+    "interactable": true,
+    "role": "button",
+    "state": "idle",
+  },
+  {
+    "id": "balance",
+    "interactable": false,
+    "role": "status",
+    "state": "idle",
+  },
+  {
+    "id": "bet",
+    "interactable": false,
+    "role": "status",
+    "state": "idle",
+  },
+  {
+    "id": "bet-minus",
+    "interactable": true,
+    "role": "button",
+    "state": "idle",
+  },
+  {
+    "id": "bet-plus",
+    "interactable": true,
+    "role": "button",
+    "state": "idle",
+  },
+  {
+    "id": "bet-stepper",
+    "interactable": true,
+    "role": "spinbutton",
+    "state": "idle",
+  },
+  {
+    "id": "bonus",
+    "interactable": true,
+    "role": "button",
+    "state": "idle",
+  },
+  {
+    "id": "info-close",
+    "interactable": true,
+    "role": "button",
+    "state": "idle",
+  },
+  {
+    "id": "info-panel",
+    "interactable": false,
+    "role": "dialog",
+    "state": "closed",
+  },
+  {
+    "id": "music",
+    "interactable": true,
+    "role": "slider",
+    "state": "idle",
+  },
+  {
+    "id": "rules",
+    "interactable": true,
+    "role": "button",
+    "state": "idle",
+  },
+  {
+    "id": "settings",
+    "interactable": true,
+    "role": "button",
+    "state": "idle",
+  },
+  {
+    "id": "settings-panel",
+    "interactable": false,
+    "role": "dialog",
+    "state": "closed",
+  },
+  {
+    "id": "sfx",
+    "interactable": true,
+    "role": "slider",
+    "state": "idle",
+  },
+  {
+    "id": "spin",
+    "interactable": true,
+    "role": "button",
+    "state": "idle",
+  },
+  {
+    "id": "turbo",
+    "interactable": true,
+    "role": "switch",
+    "state": "off",
+  },
+]
+`;

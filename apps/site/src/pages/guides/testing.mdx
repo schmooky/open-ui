@@ -1,0 +1,75 @@
+---
+layout: ../../layouts/Docs.astro
+title: Introspection & testing
+section: guides
+eyebrow: Concepts
+description: A stable, dev-gated introspection API exposes every control's state, interactability and bounds — so e2e never reads a pixel.
+---
+
+Test hooks are **first-class, not bolted on** (Charter&nbsp;P10). When you mount
+with `expose: true` (the default), open-ui attaches a stable API to
+`window.__OPENUI__`. Every id is stable, every state is the machine's truth, and
+every bound is the real screen rectangle — so an e2e test answers *"what state
+is the game in, can the player act, where is the spin button?"* without reading a
+single pixel.
+
+## The API
+
+```ts
+window.__OPENUI__.snapshot();
+// → [{ id:'spin', role:'button', state:'spinning',
+//      interactable:false, animating:true,
+//      bounds:{ x:540, y:980, width:96, height:96 } }, … ]
+
+window.__OPENUI__.getState('spin');          // 'spinning'
+window.__OPENUI__.isInteractable('spin');    // false (derived, not stored)
+window.__OPENUI__.bounds('bet-plus');        // {x,y,width,height} → click target
+```
+
+## A Playwright assertion
+
+Because the snapshot is serializable and bounds are real screen rects, a test
+clicks by coordinate and asserts on state — no pixel-matching, no flaky waits:
+
+```ts
+test('spin disables itself while spinning', async ({ page }) => {
+  await page.goto('/game');
+
+  const before = await page.evaluate(() => window.__OPENUI__.getState('spin'));
+  expect(before).toBe('idle');
+
+  const b = await page.evaluate(() => window.__OPENUI__.bounds('spin'));
+  await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+
+  await expect
+    .poll(() => page.evaluate(() => window.__OPENUI__.isInteractable('spin')))
+    .toBe(false); // derived from state, can't desync from the visuals
+});
+```
+
+## Transitions are queryable too
+
+`animating` flips to `false` when a transition's promise resolves, so a test can
+wait on a real signal instead of guessing a timeout (Charter&nbsp;G6).
+
+## Device screenshots, for free
+
+The [example client](https://github.com/schmooky/open-ui/tree/main/examples/demo)
+ships a Playwright suite that mounts the real HUD on a matrix of devices (iPhone,
+Pixel, iPad, desktop) and saves a screenshot of each — so you can *see* how the UI
+reflows per device. It reads the config from the URL (`?turbo=3&autoplay=infinite&spin=hold`),
+so every permutation is one line:
+
+```bash
+pnpm --dir examples/demo test:visual   # → examples/demo/screenshots/*.png
+```
+
+It also ships a **locale matrix** (the menu in 10 languages) and a **theme matrix**
+(every preset, plus a deliberately broken override that proves the HUD still mounts
+and the accent falls back) — so localization and theming are regression-screenshot
+covered, not just hoped at.
+
+## Next
+
+- [Read state in an e2e test](/recipes/e2e-introspection/) — a fuller recipe
+- [Configuration](/guides/configuration/) — every option the spec exposes
