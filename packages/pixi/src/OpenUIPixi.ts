@@ -69,6 +69,12 @@ export interface OpenUIPixiOptions {
    * shows when its jurisdiction `display*` flag is set.
    */
   statusBar?: StatusBarSide;
+  /**
+   * How the interactive HUD appears on mount: `'shown'` (default), `'hidden'` (off
+   * screen + non-interactive; reveal later with `showControls()`), or `'slide-in'`
+   * (start hidden, then slide in from the edges).
+   */
+  intro?: 'shown' | 'hidden' | 'slide-in';
 }
 
 /** Smooth S-curve for the show/hide slide (translation only — no scaling). */
@@ -92,7 +98,7 @@ export class OpenUIPixi {
    *  controls down, top up — behind the status-bar plaque). Views stay direct children
    *  of `root` (introspection bounds unchanged); only their y moves, and the
    *  ref-counted input lock makes them non-interactive while moving/hidden. */
-  private slideProg = 1; // 0 = shown · 1 = fully hidden (starts hidden → slides in on mount)
+  private slideProg = 0; // 0 = shown · 1 = fully hidden (set per `intro` on mount)
   private slideTarget = 1;
   private slideHeld = false;
   private lastScreenH = 1080;
@@ -356,10 +362,18 @@ export class OpenUIPixi {
     onResize();
     applyLayout();
 
-    // Start fully shown. The game can slide the HUD in/out any time via
-    // `hud.hideControls()` / `hud.showControls()` (e.g. hide then show for an intro).
-    this.slideProg = 0;
-    this.applySlide();
+    // Initial HUD visibility (configurable via `intro`): shown / hidden / slide-in.
+    const intro = this.opts.intro ?? 'shown';
+    if (intro === 'shown') {
+      this.slideProg = 0;
+      this.applySlide();
+    } else {
+      this.slideProg = 1; // start off-screen
+      this.applySlide();
+      this.ui.lock(); // non-interactive while hidden
+      this.slideHeld = true;
+      if (intro === 'slide-in') this.setControlsVisible(true); // animate in (unlocks when shown)
+    }
 
     this.disposers.push(() => renderer.off('resize', onResize), unsubScreen);
 
@@ -416,12 +430,14 @@ export class OpenUIPixi {
       settle();
       return;
     }
+    // Drive the slide from a wall-clock timestamp (not accumulated ticker deltas), so
+    // it completes in a fixed real-time duration regardless of frame pacing.
     const from = this.slideProg;
-    let elapsed = 0;
+    const startMs = typeof performance !== 'undefined' ? performance.now() : 0;
     if (this.slideTickFn) this.appTicker.remove(this.slideTickFn);
-    const tick = (t: Ticker): void => {
-      elapsed += t.deltaMS;
-      const k = Math.min(1, elapsed / 360);
+    const tick = (): void => {
+      const nowMs = typeof performance !== 'undefined' ? performance.now() : startMs + 360;
+      const k = Math.min(1, (nowMs - startMs) / 360);
       this.slideProg = from + (target - from) * k;
       if (k >= 1) {
         this.slideProg = target;

@@ -112,9 +112,10 @@ they sit at screen corners). `minimumRoundDuration` is surfaced as
 `ui.minimumRoundDuration` for the **game** to enforce — open-ui never throttles the
 round. Slide the whole interactive HUD in/out with **`hud.showControls()` /
 `hud.hideControls()`** — bottom controls drop, top ones rise behind the plaque (pure
-translation, non-interactive while moving). Try the flags live:
-`localhost:5199/?juris=rtp,net,timer,noturbo,noslam&statusbar=top` (press **H** to
-slide the HUD).
+translation, non-interactive while moving). Choose how it first appears at mount with
+**`intro: 'shown' | 'hidden' | 'slide-in'`**. Try the flags live:
+`localhost:5199/?juris=rtp,net,timer,noturbo,noslam&statusbar=top&intro=slide-in`
+(press **H** to slide the HUD).
 
 ## Repo layout
 

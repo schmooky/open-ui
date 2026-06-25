@@ -42,6 +42,8 @@ const cfg = {
   // reality-check interval in minutes (?reality=0.2 ≈ 12s, for demoing); replay mode
   reality: Number(q.get('reality')) || 0,
   replay: q.get('replay') === '1',
+  // initial HUD visibility: ?intro=shown|hidden|slide-in (default shown)
+  intro: (['hidden', 'slide-in'].includes(q.get('intro') ?? '') ? q.get('intro') : 'shown') as 'shown' | 'hidden' | 'slide-in',
 };
 
 /** Parse `?juris=rtp,net,timer,noturbo,noslam,…` into a Stake Engine JurisdictionConfig
@@ -190,6 +192,8 @@ async function main(): Promise<void> {
   const hud = mountHud(app, buildSpec(), {
     expose: true,
     menu: false, // the one biased menu design is the HTML one, mounted below
+    intro: cfg.intro, // ?intro=shown|hidden|slide-in
+
     spinSkin: () => svgSpinSkin({ default: spinDefault, auto: spinAuto }),
     icons: {
       // menu (☰), fullscreen + mute render as b&w "mono" glyph buttons like turbo —
