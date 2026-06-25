@@ -2,6 +2,7 @@
   "name": "open-ui-workspace",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.32.1",
   "engines": { "node": ">=20" },
   "scripts": {
     "dev": "pnpm --dir examples/demo dev",
