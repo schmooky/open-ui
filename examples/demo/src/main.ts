@@ -94,12 +94,14 @@ function buildSpec(): UISpec {
       spin: { layout: { anchor: 'bottom-center', offset: [0, -150], scale: 1.25, rotation: 0 } },
       autoplay: { layout: { anchor: 'bottom-center', offset: [-240, -140] } },
       turbo: { layout: { anchor: 'bottom-center', offset: [240, -140] } },
-      balance: { layout: { anchor: 'bottom-left', offset: [185, -62] } },
-      bet: { layout: { anchor: 'bottom-right', offset: [-330, -62] } },
+      // balance + bet read large — the two figures the player checks most (scale 1.35).
+      balance: { layout: { anchor: 'bottom-left', offset: [205, -64], scale: 1.35 } },
+      bet: { layout: { anchor: 'bottom-right', offset: [-345, -64], scale: 1.35 } },
       'bet-plus': { layout: { anchor: 'bottom-right', offset: [-118, -92] } },
       'bet-minus': { layout: { anchor: 'bottom-right', offset: [-118, -40] } },
-      bonus: { layout: { anchor: 'bottom-right', offset: [-208, -210] } },
-      settings: { layout: { anchor: 'bottom-left', offset: [95, -135] } },
+      // bonus (buy) on the right rail + ☰ menu on the lower left, both lifted a little.
+      bonus: { layout: { anchor: 'bottom-right', offset: [-208, -258] } },
+      settings: { layout: { anchor: 'bottom-left', offset: [95, -182] } },
     },
     // The unified ☰ menu — every part is a modular, configurable BLOCK: a banner
     // image, a divider+settings, a multiplier paytable with symbol icons, and rules
@@ -131,22 +133,24 @@ function buildSpec(): UISpec {
     },
     // 10-locale dictionary + starting locale; a Language switch appears in Settings.
     locale: { messages: MESSAGES, locale: cfg.locale },
-    // Reflow the bottom bar for narrow screens, and drop the bonus button on phones.
+    // Portrait reflow: a thumb-friendly stack that holds together down to the
+    // narrowest phone. SPIN drops to the same row as autoplay + turbo (which move
+    // out to the screen sides); the bet steppers tuck directly below SPIN; the buy
+    // (bonus) + ☰ menu sit on the row above. The buy button is NEVER hidden.
     responsive: {
       portrait: {
         controls: {
-          spin: { layout: { anchor: 'bottom-center', offset: [0, -470] } },
-          autoplay: { layout: { anchor: 'bottom-center', offset: [-150, -250] } },
-          turbo: { layout: { anchor: 'bottom-center', offset: [150, -250] } },
-          bonus: { layout: { anchor: 'bottom-center', offset: [-330, -250] } },
-          'bet-minus': { layout: { anchor: 'bottom-center', offset: [-150, -110] } },
-          'bet-plus': { layout: { anchor: 'bottom-center', offset: [150, -110] } },
-          settings: { layout: { anchor: 'bottom-center', offset: [330, -250] } },
-          balance: { layout: { anchor: 'bottom-left', offset: [180, -40] } },
-          bet: { layout: { anchor: 'bottom-right', offset: [-180, -40] } },
+          spin: { layout: { anchor: 'bottom-center', offset: [0, -300], scale: 1.15 } },
+          autoplay: { layout: { anchor: 'bottom-center', offset: [-370, -300] } },
+          turbo: { layout: { anchor: 'bottom-center', offset: [370, -300] } },
+          'bet-minus': { layout: { anchor: 'bottom-center', offset: [-95, -140] } },
+          'bet-plus': { layout: { anchor: 'bottom-center', offset: [95, -140] } },
+          bonus: { layout: { anchor: 'bottom-center', offset: [-300, -490] } },
+          settings: { layout: { anchor: 'bottom-center', offset: [300, -490] } },
+          balance: { layout: { anchor: 'bottom-left', offset: [215, -56], scale: 1.25 } },
+          bet: { layout: { anchor: 'bottom-right', offset: [-215, -56], scale: 1.25 } },
         },
       },
-      mobile: { controls: { bonus: { hidden: true } } },
     },
   };
 }
