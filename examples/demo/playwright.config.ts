@@ -26,9 +26,13 @@ export default defineConfig({
   // engine to Chromium so the suite needs only `playwright install chromium`
   // (mobile descriptors otherwise default to WebKit). Emulation is enough for
   // layout screenshots; swap to WebKit if you want true Safari rendering.
+  // One project per device × ORIENTATION, so the locale matrix + screenshots cover
+  // phone / tablet / desktop in BOTH portrait and landscape.
   projects: [
     { name: 'iphone-13', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
+    { name: 'iphone-13-landscape', use: { ...devices['iPhone 13 landscape'], browserName: 'chromium' } },
     { name: 'pixel-5', use: { ...devices['Pixel 5'], browserName: 'chromium' } },
+    { name: 'pixel-5-landscape', use: { ...devices['Pixel 5 landscape'], browserName: 'chromium' } },
     { name: 'ipad', use: { ...devices['iPad (gen 7)'], browserName: 'chromium' } },
     { name: 'ipad-landscape', use: { ...devices['iPad (gen 7) landscape'], browserName: 'chromium' } },
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },

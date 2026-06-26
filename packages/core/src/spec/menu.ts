@@ -22,11 +22,13 @@ export interface MenuSpec {
 
 export const DEFAULT_MENU_TITLES = { settings: 'Settings', paytable: 'Paytable', rules: 'Rules' } as const;
 
-/** Native names for the language switch; falls back to the upper-cased code. */
+/** Native names for the language switch; falls back to the upper-cased code.
+ *  Covers Stake Engine's locale set (ar de en es fr id ja ko pl pt ru tr vi zh fi hi). */
 export const LOCALE_LABELS: Record<string, string> = {
   en: 'English', es: 'Español', pt: 'Português', de: 'Deutsch', fr: 'Français',
-  it: 'Italiano', ru: 'Русский', tr: 'Türkçe', zh: '中文', ja: '日本語',
-  ar: 'العربية', pl: 'Polski', nl: 'Nederlands', ko: '한국어', hi: 'हिन्दी',
+  ru: 'Русский', tr: 'Türkçe', zh: '中文', ja: '日本語', ar: 'العربية',
+  pl: 'Polski', ko: '한국어', hi: 'हिन्दी', id: 'Bahasa Indonesia', vi: 'Tiếng Việt',
+  fi: 'Suomi', it: 'Italiano', nl: 'Nederlands',
 };
 
 export interface ComposeMenuOptions {

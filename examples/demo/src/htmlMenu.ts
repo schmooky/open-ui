@@ -1,7 +1,7 @@
 import { Sprite, type Application } from 'pixi.js';
 import { HTMLSource } from 'pixi.js/html-source';
 import type { BootedHud } from '@open-ui/pixi';
-import type { BlockSpec } from '@open-ui/core';
+import { LOCALE_LABELS, type BlockSpec } from '@open-ui/core';
 import { MESSAGES } from './locales';
 import { RULES_BLOCKS } from './content';
 
@@ -34,10 +34,7 @@ function supportsCanvasLayout(): boolean {
   }
 }
 
-const LOCALE_LABELS: Record<string, string> = {
-  en: 'English', es: 'Español', pt: 'Português', de: 'Deutsch', fr: 'Français',
-  it: 'Italiano', ru: 'Русский', tr: 'Türkçe', zh: '中文', ja: '日本語',
-};
+// (native language names come from @open-ui/core's LOCALE_LABELS — covers all 16 Stake locales)
 
 const PAYTABLE = [
   { e: '🃏', p: ['8-9: 10.00x', '10-11: 25.00x', '12+: 50.00x'] },

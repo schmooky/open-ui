@@ -1,8 +1,11 @@
 /**
- * A 10-locale dictionary for the example client. open-ui localizes by key
- * fall-through: any key without a translation simply shows the key (English here),
- * so a partial dictionary is SAFE — it can never produce blank or broken UI. The
- * Playwright locale matrix screenshots the menu in every one of these.
+ * Dictionary for the example client, covering **Stake Engine's 16 locales**
+ * (ar de en es fr id ja ko pl pt ru tr vi zh fi hi — English is the source/fallback).
+ * open-ui localizes by key fall-through: any key without a translation simply shows
+ * the key (English here), so a partial dictionary is SAFE — it can never produce
+ * blank or broken UI. The Playwright locale matrix screenshots the menu in every one
+ * of these, on every device + orientation. (`ar` is RTL — strings are translated;
+ * full right-to-left layout mirroring is a separate concern.)
  *
  * The longer entries are the RULES content (see content.ts) — the English block
  * text doubles as the key, so both menu renderers translate against these. `**…**`
@@ -109,30 +112,6 @@ export const MESSAGES: Messages = {
     'Buy Feature': 'Acheter une fonction', Buy: 'Acheter', Activate: 'Activer', Activated: 'Activé', 'Bought!': 'Acheté !',
     'Super Spins': 'Super tours', 'Ante Bet': 'Mise ante', 'Double Chance': 'Double chance',
   },
-  it: {
-    Menu: 'Menu', Settings: 'Impostazioni', Paytable: 'Tabella pagamenti', Rules: 'Regole',
-    Music: 'Musica', Sound: 'Suono', Effects: 'Effetti', Language: 'Lingua', Balance: 'Saldo', Bet: 'Puntata',
-    Autoplay: 'Auto', Start: 'Avvia', 'How to win': 'Come vincere', 'Quick spin': 'Giro rapido',
-    Tip: 'Consiglio', 'Match symbols to win.': 'Abbina i simboli per vincere.', 'Hold spin for turbo.': 'Tieni premuto per il turbo.',
-    'Match symbols on a line to win — **bigger symbols pay more**, and **Wild** substitutes for all.':
-      'Allinea i simboli su una linea per vincere — **i simboli più grandi pagano di più**, e il **Wild** sostituisce tutti.',
-    'Free Spins': 'Giri gratis',
-    'Land 3 or more **Scatters** to trigger 10 free spins with a rising multiplier.':
-      'Ottieni 3 o più **Scatter** per attivare 10 giri gratis con moltiplicatore crescente.',
-    Features: 'Funzioni', Wild: 'Wild', 'Substitutes for every paying symbol.': 'Sostituisce ogni simbolo che paga.',
-    Scatter: 'Scatter', 'Pays anywhere on the reels.': 'Paga ovunque sui rulli.',
-    Multiplier: 'Moltiplicatore', 'Boosts every win during the bonus.': 'Aumenta ogni vincita durante il bonus.',
-    'How to play': 'Come giocare',
-    'Set your bet with the - and + buttons.': 'Imposta la puntata con i pulsanti − e +.',
-    'Press spin once, or **hold** for turbo.': 'Premi gira una volta, o **tieni premuto** per il turbo.',
-    'Land 3 or more **Scatters** to start the bonus.': 'Ottieni 3 o più **Scatter** per avviare il bonus.',
-    'Symbol payouts': 'Pagamenti dei simboli', Symbol: 'Simbolo', Star: 'Stella', Ace: 'Asso',
-    Volatility: 'Volatilità', High: 'Alta', Lines: 'Linee', 'Max win': 'Vincita max',
-    'Please note': 'Nota bene', 'Malfunction voids all pays and play.': 'Un malfunzionamento annulla tutte le vincite e le giocate.',
-    'Play responsibly. 18+. Terms and conditions apply.': 'Gioca responsabilmente. 18+. Si applicano termini e condizioni.',
-    'Buy Feature': 'Acquista funzione', Buy: 'Acquista', Activate: 'Attiva', Activated: 'Attivato', 'Bought!': 'Acquistato!',
-    'Super Spins': 'Super giri', 'Ante Bet': 'Puntata ante', 'Double Chance': 'Doppia chance',
-  },
   ru: {
     Menu: 'Меню', Settings: 'Настройки', Paytable: 'Таблица выплат', Rules: 'Правила',
     Music: 'Музыка', Sound: 'Звук', Effects: 'Эффекты', Language: 'Язык', Balance: 'Баланс', Bet: 'Ставка',
@@ -228,6 +207,174 @@ export const MESSAGES: Messages = {
     'Play responsibly. 18+. Terms and conditions apply.': '責任を持ってプレイしてください。18歳以上。利用規約が適用されます。',
     'Buy Feature': '機能購入', Buy: '購入', Activate: '有効化', Activated: '有効', 'Bought!': '購入しました！',
     'Super Spins': 'スーパースピン', 'Ante Bet': 'アンティベット', 'Double Chance': 'ダブルチャンス',
+  },
+  ar: {
+    Menu: 'القائمة', Settings: 'الإعدادات', Paytable: 'جدول الدفع', Rules: 'القواعد',
+    Music: 'الموسيقى', Sound: 'الصوت', Effects: 'المؤثرات', Language: 'اللغة', Balance: 'الرصيد', Bet: 'الرهان',
+    Autoplay: 'تلقائي', Start: 'ابدأ', 'How to win': 'كيف تربح', 'Quick spin': 'دوران سريع',
+    Tip: 'نصيحة', 'Match symbols to win.': 'طابق الرموز لتربح.', 'Hold spin for turbo.': 'اضغط مطولاً للتربو.',
+    'Match symbols on a line to win — **bigger symbols pay more**, and **Wild** substitutes for all.':
+      'طابق الرموز على خط لتربح — **الرموز الأكبر تدفع أكثر**، و**الوايلد** يحل محل الجميع.',
+    'Free Spins': 'دورات مجانية',
+    'Land 3 or more **Scatters** to trigger 10 free spins with a rising multiplier.':
+      'احصل على 3 أو أكثر من **سكاتر** لتفعيل 10 دورات مجانية بمضاعف متزايد.',
+    Features: 'الميزات', Wild: 'وايلد', 'Substitutes for every paying symbol.': 'يحل محل كل رمز يدفع.',
+    Scatter: 'سكاتر', 'Pays anywhere on the reels.': 'يدفع في أي مكان على البكرات.',
+    Multiplier: 'المضاعف', 'Boosts every win during the bonus.': 'يزيد كل فوز أثناء الجولة الإضافية.',
+    'How to play': 'كيف تلعب',
+    'Set your bet with the - and + buttons.': 'اضبط رهانك بزرّي − و +.',
+    'Press spin once, or **hold** for turbo.': 'اضغط دوران مرة واحدة، أو **اضغط مطولاً** للتربو.',
+    'Land 3 or more **Scatters** to start the bonus.': 'احصل على 3 أو أكثر من **سكاتر** لبدء الجولة الإضافية.',
+    'Symbol payouts': 'مدفوعات الرموز', Symbol: 'رمز', Star: 'نجمة', Ace: 'آس',
+    Volatility: 'التقلب', High: 'مرتفع', Lines: 'الخطوط', 'Max win': 'أقصى فوز',
+    'Please note': 'يرجى الملاحظة', 'Malfunction voids all pays and play.': 'أي خلل يلغي جميع المدفوعات واللعب.',
+    'Play responsibly. 18+. Terms and conditions apply.': 'العب بمسؤولية. +18. تطبق الشروط والأحكام.',
+    'Buy Feature': 'شراء الميزة', Buy: 'شراء', Activate: 'تفعيل', Activated: 'مُفعّل', 'Bought!': 'تم الشراء!',
+    'Super Spins': 'دورات سوبر', 'Ante Bet': 'رهان أنتي', 'Double Chance': 'فرصة مزدوجة',
+  },
+  id: {
+    Menu: 'Menu', Settings: 'Pengaturan', Paytable: 'Tabel pembayaran', Rules: 'Aturan',
+    Music: 'Musik', Sound: 'Suara', Effects: 'Efek', Language: 'Bahasa', Balance: 'Saldo', Bet: 'Taruhan',
+    Autoplay: 'Auto', Start: 'Mulai', 'How to win': 'Cara menang', 'Quick spin': 'Putaran cepat',
+    Tip: 'Tips', 'Match symbols to win.': 'Cocokkan simbol untuk menang.', 'Hold spin for turbo.': 'Tahan untuk turbo.',
+    'Match symbols on a line to win — **bigger symbols pay more**, and **Wild** substitutes for all.':
+      'Cocokkan simbol pada satu garis untuk menang — **simbol lebih besar membayar lebih banyak**, dan **Wild** menggantikan semuanya.',
+    'Free Spins': 'Putaran gratis',
+    'Land 3 or more **Scatters** to trigger 10 free spins with a rising multiplier.':
+      'Dapatkan 3 atau lebih **Scatter** untuk memicu 10 putaran gratis dengan pengganda yang meningkat.',
+    Features: 'Fitur', Wild: 'Wild', 'Substitutes for every paying symbol.': 'Menggantikan setiap simbol yang membayar.',
+    Scatter: 'Scatter', 'Pays anywhere on the reels.': 'Membayar di mana saja pada gulungan.',
+    Multiplier: 'Pengganda', 'Boosts every win during the bonus.': 'Meningkatkan setiap kemenangan selama bonus.',
+    'How to play': 'Cara bermain',
+    'Set your bet with the - and + buttons.': 'Atur taruhan dengan tombol − dan +.',
+    'Press spin once, or **hold** for turbo.': 'Tekan putar sekali, atau **tahan** untuk turbo.',
+    'Land 3 or more **Scatters** to start the bonus.': 'Dapatkan 3 atau lebih **Scatter** untuk memulai bonus.',
+    'Symbol payouts': 'Pembayaran simbol', Symbol: 'Simbol', Star: 'Bintang', Ace: 'As',
+    Volatility: 'Volatilitas', High: 'Tinggi', Lines: 'Garis', 'Max win': 'Menang maks.',
+    'Please note': 'Harap diperhatikan', 'Malfunction voids all pays and play.': 'Kerusakan membatalkan semua pembayaran dan permainan.',
+    'Play responsibly. 18+. Terms and conditions apply.': 'Bermainlah dengan bertanggung jawab. 18+. Syarat dan ketentuan berlaku.',
+    'Buy Feature': 'Beli fitur', Buy: 'Beli', Activate: 'Aktifkan', Activated: 'Aktif', 'Bought!': 'Dibeli!',
+    'Super Spins': 'Super spin', 'Ante Bet': 'Ante bet', 'Double Chance': 'Peluang ganda',
+  },
+  ko: {
+    Menu: '메뉴', Settings: '설정', Paytable: '배당표', Rules: '규칙',
+    Music: '음악', Sound: '소리', Effects: '효과음', Language: '언어', Balance: '잔액', Bet: '베팅',
+    Autoplay: '자동', Start: '시작', 'How to win': '이기는 방법', 'Quick spin': '빠른 스핀',
+    Tip: '팁', 'Match symbols to win.': '심볼을 맞춰 이기세요.', 'Hold spin for turbo.': '길게 눌러 터보.',
+    'Match symbols on a line to win — **bigger symbols pay more**, and **Wild** substitutes for all.':
+      '한 라인에 심볼을 맞춰 이기세요 — **큰 심볼일수록 더 많이 지급**되고, **와일드**가 모든 심볼을 대체합니다.',
+    'Free Spins': '프리 스핀',
+    'Land 3 or more **Scatters** to trigger 10 free spins with a rising multiplier.':
+      '**스캐터**를 3개 이상 모으면 증가하는 배수와 함께 10회의 프리 스핀이 발동됩니다.',
+    Features: '기능', Wild: '와일드', 'Substitutes for every paying symbol.': '지급되는 모든 심볼을 대체합니다.',
+    Scatter: '스캐터', 'Pays anywhere on the reels.': '릴 어디에서나 지급됩니다.',
+    Multiplier: '배수', 'Boosts every win during the bonus.': '보너스 중 모든 당첨을 높여줍니다.',
+    'How to play': '플레이 방법',
+    'Set your bet with the - and + buttons.': '− 와 + 버튼으로 베팅을 설정하세요.',
+    'Press spin once, or **hold** for turbo.': '스핀을 한 번 누르거나 터보는 **길게 누르세요**.',
+    'Land 3 or more **Scatters** to start the bonus.': '보너스를 시작하려면 **스캐터**를 3개 이상 모으세요.',
+    'Symbol payouts': '심볼 배당', Symbol: '심볼', Star: '별', Ace: '에이스',
+    Volatility: '변동성', High: '높음', Lines: '라인', 'Max win': '최대 당첨',
+    'Please note': '유의사항', 'Malfunction voids all pays and play.': '오작동 시 모든 지급과 플레이가 무효화됩니다.',
+    'Play responsibly. 18+. Terms and conditions apply.': '책임감 있게 플레이하세요. 18세 이상. 약관이 적용됩니다.',
+    'Buy Feature': '기능 구매', Buy: '구매', Activate: '활성화', Activated: '활성화됨', 'Bought!': '구매 완료!',
+    'Super Spins': '슈퍼 스핀', 'Ante Bet': '안테 베팅', 'Double Chance': '더블 찬스',
+  },
+  pl: {
+    Menu: 'Menu', Settings: 'Ustawienia', Paytable: 'Tabela wypłat', Rules: 'Zasady',
+    Music: 'Muzyka', Sound: 'Dźwięk', Effects: 'Efekty', Language: 'Język', Balance: 'Saldo', Bet: 'Zakład',
+    Autoplay: 'Auto', Start: 'Start', 'How to win': 'Jak wygrać', 'Quick spin': 'Szybki spin',
+    Tip: 'Wskazówka', 'Match symbols to win.': 'Dopasuj symbole, aby wygrać.', 'Hold spin for turbo.': 'Przytrzymaj, aby włączyć turbo.',
+    'Match symbols on a line to win — **bigger symbols pay more**, and **Wild** substitutes for all.':
+      'Dopasuj symbole na linii, aby wygrać — **większe symbole płacą więcej**, a **Wild** zastępuje wszystkie.',
+    'Free Spins': 'Darmowe spiny',
+    'Land 3 or more **Scatters** to trigger 10 free spins with a rising multiplier.':
+      'Zdobądź 3 lub więcej **Scatterów**, aby uruchomić 10 darmowych spinów z rosnącym mnożnikiem.',
+    Features: 'Funkcje', Wild: 'Wild', 'Substitutes for every paying symbol.': 'Zastępuje każdy płacący symbol.',
+    Scatter: 'Scatter', 'Pays anywhere on the reels.': 'Płaci w dowolnym miejscu na bębnach.',
+    Multiplier: 'Mnożnik', 'Boosts every win during the bonus.': 'Zwiększa każdą wygraną podczas bonusu.',
+    'How to play': 'Jak grać',
+    'Set your bet with the - and + buttons.': 'Ustaw zakład przyciskami − i +.',
+    'Press spin once, or **hold** for turbo.': 'Naciśnij spin raz lub **przytrzymaj** dla turbo.',
+    'Land 3 or more **Scatters** to start the bonus.': 'Zdobądź 3 lub więcej **Scatterów**, aby rozpocząć bonus.',
+    'Symbol payouts': 'Wypłaty symboli', Symbol: 'Symbol', Star: 'Gwiazda', Ace: 'As',
+    Volatility: 'Zmienność', High: 'Wysoka', Lines: 'Linie', 'Max win': 'Maks. wygrana',
+    'Please note': 'Uwaga', 'Malfunction voids all pays and play.': 'Awaria unieważnia wszystkie wypłaty i grę.',
+    'Play responsibly. 18+. Terms and conditions apply.': 'Graj odpowiedzialnie. 18+. Obowiązują warunki i zasady.',
+    'Buy Feature': 'Kup funkcję', Buy: 'Kup', Activate: 'Aktywuj', Activated: 'Aktywne', 'Bought!': 'Kupiono!',
+    'Super Spins': 'Super spiny', 'Ante Bet': 'Ante Bet', 'Double Chance': 'Podwójna szansa',
+  },
+  vi: {
+    Menu: 'Menu', Settings: 'Cài đặt', Paytable: 'Bảng thanh toán', Rules: 'Luật chơi',
+    Music: 'Nhạc', Sound: 'Âm thanh', Effects: 'Hiệu ứng', Language: 'Ngôn ngữ', Balance: 'Số dư', Bet: 'Cược',
+    Autoplay: 'Tự động', Start: 'Bắt đầu', 'How to win': 'Cách thắng', 'Quick spin': 'Quay nhanh',
+    Tip: 'Mẹo', 'Match symbols to win.': 'Ghép biểu tượng để thắng.', 'Hold spin for turbo.': 'Giữ để bật turbo.',
+    'Match symbols on a line to win — **bigger symbols pay more**, and **Wild** substitutes for all.':
+      'Ghép các biểu tượng trên một hàng để thắng — **biểu tượng lớn hơn trả nhiều hơn**, và **Wild** thay thế tất cả.',
+    'Free Spins': 'Vòng quay miễn phí',
+    'Land 3 or more **Scatters** to trigger 10 free spins with a rising multiplier.':
+      'Nhận 3 hoặc nhiều **Scatter** để kích hoạt 10 vòng quay miễn phí với hệ số nhân tăng dần.',
+    Features: 'Tính năng', Wild: 'Wild', 'Substitutes for every paying symbol.': 'Thay thế mọi biểu tượng trả thưởng.',
+    Scatter: 'Scatter', 'Pays anywhere on the reels.': 'Trả thưởng ở bất kỳ đâu trên các cuộn.',
+    Multiplier: 'Hệ số nhân', 'Boosts every win during the bonus.': 'Tăng mọi chiến thắng trong vòng thưởng.',
+    'How to play': 'Cách chơi',
+    'Set your bet with the - and + buttons.': 'Đặt cược bằng nút − và +.',
+    'Press spin once, or **hold** for turbo.': 'Nhấn quay một lần, hoặc **giữ** để bật turbo.',
+    'Land 3 or more **Scatters** to start the bonus.': 'Nhận 3 hoặc nhiều **Scatter** để bắt đầu vòng thưởng.',
+    'Symbol payouts': 'Thanh toán biểu tượng', Symbol: 'Biểu tượng', Star: 'Ngôi sao', Ace: 'Át',
+    Volatility: 'Độ biến động', High: 'Cao', Lines: 'Dòng', 'Max win': 'Thắng tối đa',
+    'Please note': 'Xin lưu ý', 'Malfunction voids all pays and play.': 'Sự cố sẽ hủy mọi khoản thanh toán và lượt chơi.',
+    'Play responsibly. 18+. Terms and conditions apply.': 'Chơi có trách nhiệm. 18+. Áp dụng các điều khoản và điều kiện.',
+    'Buy Feature': 'Mua tính năng', Buy: 'Mua', Activate: 'Kích hoạt', Activated: 'Đã kích hoạt', 'Bought!': 'Đã mua!',
+    'Super Spins': 'Siêu vòng quay', 'Ante Bet': 'Cược Ante', 'Double Chance': 'Cơ hội kép',
+  },
+  fi: {
+    Menu: 'Valikko', Settings: 'Asetukset', Paytable: 'Maksutaulukko', Rules: 'Säännöt',
+    Music: 'Musiikki', Sound: 'Ääni', Effects: 'Tehosteet', Language: 'Kieli', Balance: 'Saldo', Bet: 'Panos',
+    Autoplay: 'Auto', Start: 'Aloita', 'How to win': 'Näin voitat', 'Quick spin': 'Pikapyöräytys',
+    Tip: 'Vinkki', 'Match symbols to win.': 'Yhdistä symbolit voittaaksesi.', 'Hold spin for turbo.': 'Pidä pohjassa turboon.',
+    'Match symbols on a line to win — **bigger symbols pay more**, and **Wild** substitutes for all.':
+      'Yhdistä symbolit linjalla voittaaksesi — **suuremmat symbolit maksavat enemmän**, ja **Wild** korvaa kaikki.',
+    'Free Spins': 'Ilmaiskierrokset',
+    'Land 3 or more **Scatters** to trigger 10 free spins with a rising multiplier.':
+      'Kerää 3 tai useampi **Scatter** käynnistääksesi 10 ilmaiskierrosta nousevalla kertoimella.',
+    Features: 'Ominaisuudet', Wild: 'Wild', 'Substitutes for every paying symbol.': 'Korvaa jokaisen maksavan symbolin.',
+    Scatter: 'Scatter', 'Pays anywhere on the reels.': 'Maksaa missä tahansa kiekoilla.',
+    Multiplier: 'Kerroin', 'Boosts every win during the bonus.': 'Kasvattaa jokaista voittoa bonuksen aikana.',
+    'How to play': 'Näin pelaat',
+    'Set your bet with the - and + buttons.': 'Aseta panos − ja + -painikkeilla.',
+    'Press spin once, or **hold** for turbo.': 'Paina pyöräytä kerran tai **pidä pohjassa** turboon.',
+    'Land 3 or more **Scatters** to start the bonus.': 'Kerää 3 tai useampi **Scatter** aloittaaksesi bonuksen.',
+    'Symbol payouts': 'Symbolien maksut', Symbol: 'Symboli', Star: 'Tähti', Ace: 'Ässä',
+    Volatility: 'Volatiliteetti', High: 'Korkea', Lines: 'Linjat', 'Max win': 'Maksimivoitto',
+    'Please note': 'Huomioi', 'Malfunction voids all pays and play.': 'Toimintahäiriö mitätöi kaikki maksut ja pelin.',
+    'Play responsibly. 18+. Terms and conditions apply.': 'Pelaa vastuullisesti. 18+. Ehdot pätevät.',
+    'Buy Feature': 'Osta ominaisuus', Buy: 'Osta', Activate: 'Aktivoi', Activated: 'Aktivoitu', 'Bought!': 'Ostettu!',
+    'Super Spins': 'Superpyöräytykset', 'Ante Bet': 'Ante-panos', 'Double Chance': 'Tuplamahdollisuus',
+  },
+  hi: {
+    Menu: 'मेन्यू', Settings: 'सेटिंग्स', Paytable: 'भुगतान तालिका', Rules: 'नियम',
+    Music: 'संगीत', Sound: 'ध्वनि', Effects: 'प्रभाव', Language: 'भाषा', Balance: 'बैलेंस', Bet: 'दांव',
+    Autoplay: 'ऑटो', Start: 'शुरू करें', 'How to win': 'कैसे जीतें', 'Quick spin': 'क्विक स्पिन',
+    Tip: 'सुझाव', 'Match symbols to win.': 'जीतने के लिए प्रतीक मिलाएं।', 'Hold spin for turbo.': 'टर्बो के लिए दबाए रखें।',
+    'Match symbols on a line to win — **bigger symbols pay more**, and **Wild** substitutes for all.':
+      'जीतने के लिए एक लाइन पर प्रतीक मिलाएं — **बड़े प्रतीक अधिक भुगतान करते हैं**, और **वाइल्ड** सभी की जगह लेता है।',
+    'Free Spins': 'फ्री स्पिन',
+    'Land 3 or more **Scatters** to trigger 10 free spins with a rising multiplier.':
+      'बढ़ते गुणक के साथ 10 फ्री स्पिन शुरू करने के लिए 3 या अधिक **स्कैटर** प्राप्त करें।',
+    Features: 'विशेषताएं', Wild: 'वाइल्ड', 'Substitutes for every paying symbol.': 'हर भुगतान करने वाले प्रतीक की जगह लेता है।',
+    Scatter: 'स्कैटर', 'Pays anywhere on the reels.': 'रीलों पर कहीं भी भुगतान करता है।',
+    Multiplier: 'गुणक', 'Boosts every win during the bonus.': 'बोनस के दौरान हर जीत को बढ़ाता है।',
+    'How to play': 'कैसे खेलें',
+    'Set your bet with the - and + buttons.': '− और + बटनों से अपना दांव सेट करें।',
+    'Press spin once, or **hold** for turbo.': 'एक बार स्पिन दबाएं, या टर्बो के लिए **दबाए रखें**।',
+    'Land 3 or more **Scatters** to start the bonus.': 'बोनस शुरू करने के लिए 3 या अधिक **स्कैटर** प्राप्त करें।',
+    'Symbol payouts': 'प्रतीक भुगतान', Symbol: 'प्रतीक', Star: 'सितारा', Ace: 'इक्का',
+    Volatility: 'अस्थिरता', High: 'उच्च', Lines: 'लाइनें', 'Max win': 'अधिकतम जीत',
+    'Please note': 'कृपया ध्यान दें', 'Malfunction voids all pays and play.': 'खराबी सभी भुगतान और खेल को रद्द कर देती है।',
+    'Play responsibly. 18+. Terms and conditions apply.': 'जिम्मेदारी से खेलें। 18+। नियम और शर्तें लागू।',
+    'Buy Feature': 'फीचर खरीदें', Buy: 'खरीदें', Activate: 'सक्रिय करें', Activated: 'सक्रिय', 'Bought!': 'खरीद लिया!',
+    'Super Spins': 'सुपर स्पिन', 'Ante Bet': 'एंटे बेट', 'Double Chance': 'डबल चांस',
   },
 };
 
