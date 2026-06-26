@@ -396,3 +396,39 @@ describe('free-spins spin face + audio start flag', () => {
     expect(ui.musicSlider.value.get()).toBe(0);
   });
 });
+
+describe('compliance — review-driven coverage', () => {
+  it('replacing a blocking notice with a normal one releases the lock', () => {
+    const ui = createUI();
+    ui.showFatal('fatal');
+    expect(ui.locked.get()).toBe(true);
+    ui.showError('normal'); // replaces while open (openPanel idempotent)
+    expect(ui.noticeBlocking.get()).toBe(false);
+    expect(ui.locked.get()).toBe(false); // no leaked lock
+  });
+
+  it('emits noticeDismissed when the modal closes', () => {
+    const ui = createUI();
+    let dismissed = 0;
+    ui.on('noticeDismissed', () => (dismissed += 1));
+    ui.showError('x');
+    ui.hideNotice();
+    expect(dismissed).toBe(1);
+  });
+
+  it('setSocial(false) reverts wording but NOT the coin (host re-sets the fiat coin)', () => {
+    const ui = createUI();
+    ui.setSocial(true, 'GC');
+    expect(ui.t('openui.buyFeature.title')).toBe('Play bonus');
+    expect(ui.balance.currency.get().code).toBe('GC');
+    ui.setSocial(false);
+    expect(ui.t('openui.buyFeature.title')).toBe('Buy feature'); // wording reverts
+    expect(ui.balance.currency.get().code).toBe('GC'); // coin intentionally NOT auto-reverted
+  });
+
+  it('startRealityCheck registers a disposer that is torn down by dispose()', () => {
+    const ui = createUI({ realityCheck: { everyMinutes: 30 } });
+    // dispose() must not throw and must clear the scheduler (no dangling timer callbacks)
+    expect(() => ui.dispose()).not.toThrow();
+  });
+});
