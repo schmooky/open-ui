@@ -51,12 +51,13 @@ export interface FitOptions {
   /** GSAP ease string. Default `'power2.out'`. */
   ease?: string;
   /**
-   * Which edge of the (unscaled) counter stays put when scaling.
+   * Which point of the (unscaled) counter stays put when scaling.
    *
    * - `'left'` — pivot at x=0; left edge stays put. Default.
    * - `'right'` — pivot at the right edge of the suffix; right edge stays put.
+   * - `'center'` — pivot at the horizontal centre; the readout stays centred at any scale.
    */
-  anchor?: 'left' | 'right';
+  anchor?: 'left' | 'right' | 'center';
   /**
    * The `gsap` module's default export. Passing it yourself keeps GSAP an
    * optional peer dep — no GSAP code reaches your bundle unless `fit` is used.

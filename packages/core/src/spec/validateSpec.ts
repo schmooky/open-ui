@@ -121,6 +121,13 @@ export function validateSpec(spec: UISpec): { ok: boolean; issues: SpecIssue[] }
     if (spec.controls) {
       for (const [id, ov] of Object.entries(spec.controls)) {
         checkLayout(ov.layout?.anchor, `controls.${id}.layout.anchor`);
+        if (ov.digits != null) {
+          if (!(typeof ov.digits === 'number' && Number.isFinite(ov.digits))) {
+            add('error', `controls.${id}.digits`, 'bad-digits', `digits must be a number, got ${String(ov.digits)}`);
+          } else if (ov.digits < 0 || ov.digits > 18) {
+            add('warn', `controls.${id}.digits`, 'digits-range', `digits ${ov.digits} clamped to 0..18 (0 = auto)`);
+          }
+        }
       }
     }
 

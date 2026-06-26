@@ -16,15 +16,15 @@ describe('safe theming — configure, never break', () => {
 
   it('a bad accent colour falls back to the theme default and reports the issue', () => {
     const onIssue = vi.fn();
-    const theme = resolveTheme({ preset: 'neon', overrides: { color: { accent: 'not-a-color' } } }, onIssue);
-    expect(theme.color.accent).toBe(themePresets.neon.color.accent); // unchanged, not broken
+    const theme = resolveTheme({ preset: 'default', overrides: { color: { accent: 'not-a-color' } } }, onIssue);
+    expect(theme.color.accent).toBe(themePresets.default.color.accent); // unchanged, not broken
     expect(onIssue).toHaveBeenCalledWith(expect.objectContaining({ code: 'bad-color', path: 'theme.color.accent' }));
   });
 
   it('a valid override is applied; the rest of the preset is preserved', () => {
-    const theme = resolveTheme({ preset: 'neon', overrides: { color: { accent: '#abc123' } } });
+    const theme = resolveTheme({ preset: 'default', overrides: { color: { accent: '#abc123' } } });
     expect(theme.color.accent).toBe('#abc123');
-    expect(theme.color.text).toBe(themePresets.neon.color.text);
+    expect(theme.color.text).toBe(themePresets.default.color.text);
   });
 
   it('clamps radii and ignores a non-finite one', () => {

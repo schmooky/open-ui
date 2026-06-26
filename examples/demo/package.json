@@ -15,6 +15,7 @@
   "dependencies": {
     "@open-ui/core": "workspace:*",
     "@open-ui/pixi": "workspace:*",
+    "gsap": "^3.13.0",
     "pixi.js": "^8.6.6"
   },
   "devDependencies": {

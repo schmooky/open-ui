@@ -21,6 +21,7 @@ import { DialogView } from './views/DialogView';
 import { StatusBarView, type StatusBarSide } from './views/StatusBarView';
 import { type ControlViewFactory } from './views/blockColumn';
 import { type SpinSkinFactory } from './skin/SpinSkin';
+import { type GsapLike } from 'pixi-text-counter';
 
 export interface OpenUIIcons {
   settingsIdle?: Texture;
@@ -58,6 +59,12 @@ export interface OpenUIPixiOptions {
   menuTitle?: string;
   /** Per-id view override — swap a control's renderer without forking (Charter P7). */
   controlSkins?: Partial<Record<string, ControlViewFactory>>;
+  /**
+   * Host `gsap` — enables the value counter's auto-downscale so wide currencies
+   * (8-decimal BTC, big SATS counts, long codes) shrink to fit instead of spilling.
+   * Kept out of the lib's deps (Charter B5); the host passes its own gsap.
+   */
+  gsap?: GsapLike;
   /**
    * Autoplay count-picker presentation. `'drawer'` (default) is a bottom sheet;
    * `'radial'` fans the count chips around the spin button.
@@ -129,8 +136,8 @@ export class OpenUIPixi {
 
     // spin + balance/bet value displays
     const spinView = new SpinView(this.ui.spin, this.ui, ticker, this.opts.spinSkin);
-    const balanceView = new ValueDisplayView(this.ui.balance, this.ui, ticker);
-    const betView = new ValueDisplayView(this.ui.bet, this.ui, ticker);
+    const balanceView = new ValueDisplayView(this.ui.balance, this.ui, ticker, this.opts.gsap);
+    const betView = new ValueDisplayView(this.ui.bet, this.ui, ticker, this.opts.gsap);
 
     // settings button (☰) → the unified scrollable MENU (settings/paytable/rules)
     const settingsView = new ButtonView(this.ui.settingsButton, this.ui, ticker, {

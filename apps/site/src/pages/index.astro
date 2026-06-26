@@ -14,7 +14,7 @@ const principles = [
 const config = `import { mountHud } from '@open-ui/pixi';
 
 mountHud(app, {
-  theme: 'neon',                 // 'default' | 'midnight' | 'neon'
+  theme: { overrides: { color: { accent: '#ffc935' } } }, // one b&w theme; recolour via overrides
   turbo:    { modes: 3 },        // 2-mode toggle or 3-mode switcher
   autoplay: { mode: 'options' }, // 'options' drawer, or 'infinite'
   spin:     { press: 'hold-to-spin' }, // 'tap' or hold-to-turbo-spin

@@ -5,6 +5,7 @@ import { MESSAGES } from './locales';
 import { RULES_BLOCKS, FEATURES } from './content';
 import { mountHtmlMenu } from './htmlMenu';
 import { mountBuyFeatureModal } from './buyFeatureModal';
+import { gsap } from 'gsap';
 
 /**
  * The open-ui EXAMPLE CLIENT — a throwaway host "game" (a shuffling pip grid) with
@@ -12,22 +13,31 @@ import { mountBuyFeatureModal } from './buyFeatureModal';
  * behaves like is set by a plain JSON UISpec, here read from the URL so the
  * Playwright suites can screenshot every permutation:
  *
- *   ?theme=neon&turbo=3&autoplay=infinite&spin=hold&currency=BTC&locale=ja&bare=1
- *   ?accent=%23ff0000   (theme override — try a broken value, it can't break the UI)
+ *   ?turbo=3&autoplay=infinite&spin=hold&currency=BTC&locale=ja&bare=1
+ *   ?accent=%23ff0000   (recolour the one b&w+yellow theme — a broken value can't break it)
  */
 
 const legendEl = document.getElementById('legend') as HTMLDivElement;
 const q = new URLSearchParams(location.search);
 if (q.get('bare') === '1') document.body.classList.add('bare');
 
+// Each entry exercises a different facet: symbol-vs-code display, the minimal-unit
+// precision (decimals after the .), and big numbers that make the counter auto-scale.
+//   ?currency=USD|EUR|mBTC|SATS|BTC
 const CURRENCIES: Record<string, { spec: CurrencySpec; balance: number; bet: number }> = {
-  USD: { spec: { code: 'USD', decimals: 2 }, balance: 1000, bet: 1 },
-  EUR: { spec: { code: 'EUR', decimals: 2, decimalChar: ',', separator: '.' }, balance: 1000, bet: 1 },
-  BTC: { spec: { code: 'BTC', decimals: 8 }, balance: 1.23456789, bet: 0.0001 },
+  // symbol display ($ sits tight before the number) · 2-decimal minor unit
+  USD: { spec: { code: 'USD', symbol: '$', display: 'symbol', position: 'prefix', decimals: 2 }, balance: 12345.67, bet: 1 },
+  EUR: { spec: { code: 'EUR', symbol: '€', display: 'symbol', position: 'prefix', decimals: 2, decimalChar: ',', separator: '.' }, balance: 12345.67, bet: 1 },
+  // crypto CODES (no symbol) with different minimal units → different decimals,
+  // and wide values that trigger the counter's auto-downscale.
+  mBTC: { spec: { code: 'mBTC', decimals: 5 }, balance: 1234.56789, bet: 0.01 },
+  SATS: { spec: { code: 'SATS', decimals: 0 }, balance: 123456789, bet: 100 },
+  BTC: { spec: { code: 'BTC', symbol: '₿', display: 'symbol', position: 'prefix', decimals: 8 }, balance: 1.23456789, bet: 0.0001 },
 };
 
 const cfg = {
-  theme: (q.get('theme') ?? 'midnight') as ThemePreset,
+  // open-ui ships ONE theme — black & white with a yellow accent. `?accent=` recolours it.
+  theme: 'default' as ThemePreset,
   accent: q.get('accent') ?? undefined,
   turbo: q.get('turbo') === '3' ? (3 as const) : (2 as const),
   autoplay: q.get('autoplay') === 'infinite' ? ('infinite' as const) : ('options' as const),
@@ -94,12 +104,14 @@ function buildSpec(): UISpec {
       spin: { layout: { anchor: 'bottom-center', offset: [0, -150], scale: 1.25, rotation: 0 } },
       autoplay: { layout: { anchor: 'bottom-center', offset: [-240, -140] } },
       turbo: { layout: { anchor: 'bottom-center', offset: [240, -140] } },
-      balance: { layout: { anchor: 'bottom-left', offset: [185, -62] } },
-      bet: { layout: { anchor: 'bottom-right', offset: [-330, -62] } },
+      // balance + bet read large — the two figures the player checks most (scale 1.35).
+      balance: { layout: { anchor: 'bottom-left', offset: [205, -64], scale: 1.35 } },
+      bet: { layout: { anchor: 'bottom-right', offset: [-345, -64], scale: 1.35 } },
       'bet-plus': { layout: { anchor: 'bottom-right', offset: [-118, -92] } },
       'bet-minus': { layout: { anchor: 'bottom-right', offset: [-118, -40] } },
-      bonus: { layout: { anchor: 'bottom-right', offset: [-208, -210] } },
-      settings: { layout: { anchor: 'bottom-left', offset: [95, -135] } },
+      // bonus (buy) on the right rail + ☰ menu on the lower left, both lifted a little.
+      bonus: { layout: { anchor: 'bottom-right', offset: [-208, -258] } },
+      settings: { layout: { anchor: 'bottom-left', offset: [95, -182] } },
     },
     // The unified ☰ menu — every part is a modular, configurable BLOCK: a banner
     // image, a divider+settings, a multiplier paytable with symbol icons, and rules
@@ -131,22 +143,24 @@ function buildSpec(): UISpec {
     },
     // 10-locale dictionary + starting locale; a Language switch appears in Settings.
     locale: { messages: MESSAGES, locale: cfg.locale },
-    // Reflow the bottom bar for narrow screens, and drop the bonus button on phones.
+    // Portrait reflow: a thumb-friendly stack that holds together down to the
+    // narrowest phone. SPIN drops to the same row as autoplay + turbo (which move
+    // out to the screen sides); the bet steppers tuck directly below SPIN; the buy
+    // (bonus) + ☰ menu sit on the row above. The buy button is NEVER hidden.
     responsive: {
       portrait: {
         controls: {
-          spin: { layout: { anchor: 'bottom-center', offset: [0, -470] } },
-          autoplay: { layout: { anchor: 'bottom-center', offset: [-150, -250] } },
-          turbo: { layout: { anchor: 'bottom-center', offset: [150, -250] } },
-          bonus: { layout: { anchor: 'bottom-center', offset: [-330, -250] } },
-          'bet-minus': { layout: { anchor: 'bottom-center', offset: [-150, -110] } },
-          'bet-plus': { layout: { anchor: 'bottom-center', offset: [150, -110] } },
-          settings: { layout: { anchor: 'bottom-center', offset: [330, -250] } },
-          balance: { layout: { anchor: 'bottom-left', offset: [180, -40] } },
-          bet: { layout: { anchor: 'bottom-right', offset: [-180, -40] } },
+          spin: { layout: { anchor: 'bottom-center', offset: [0, -300], scale: 1.15 } },
+          autoplay: { layout: { anchor: 'bottom-center', offset: [-370, -300] } },
+          turbo: { layout: { anchor: 'bottom-center', offset: [370, -300] } },
+          'bet-minus': { layout: { anchor: 'bottom-center', offset: [-95, -140] } },
+          'bet-plus': { layout: { anchor: 'bottom-center', offset: [95, -140] } },
+          bonus: { layout: { anchor: 'bottom-center', offset: [-300, -490] } },
+          settings: { layout: { anchor: 'bottom-center', offset: [300, -490] } },
+          balance: { layout: { anchor: 'bottom-left', offset: [215, -56], scale: 1.25 } },
+          bet: { layout: { anchor: 'bottom-right', offset: [-215, -56], scale: 1.25 } },
         },
       },
-      mobile: { controls: { bonus: { hidden: true } } },
     },
   };
 }
@@ -191,6 +205,7 @@ async function main(): Promise<void> {
   // ---- mount the whole HUD in ONE call (Charter B9) ----
   const hud = mountHud(app, buildSpec(), {
     expose: true,
+    gsap, // enables the value counter's auto-downscale for wide currencies
     menu: false, // the one biased menu design is the HTML one, mounted below
     intro: cfg.intro, // ?intro=shown|hidden|slide-in
 

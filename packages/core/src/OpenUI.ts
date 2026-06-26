@@ -143,7 +143,6 @@ export class OpenUI {
       layout: { anchor: 'bottom-left', offset: [220, -96] },
       currency: { code: 'USD', decimals: 2 },
       initial: 1000,
-      digits: 9,
     });
     this.bet = new ValueDisplay({
       id: 'bet',
@@ -151,7 +150,6 @@ export class OpenUI {
       layout: { anchor: 'bottom-right', offset: [-220, -96] },
       currency: { code: 'USD', decimals: 2 },
       initial: 1,
-      digits: 9,
     });
 
     // settings flyout: a button that toggles a popover with sound sliders + a Rules button

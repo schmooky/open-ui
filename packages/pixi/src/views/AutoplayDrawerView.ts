@@ -47,6 +47,7 @@ export class AutoplayDrawerView extends Container {
   private prog = 0; // 0 hidden → 1 fully shown
   private running = false;
   private sheetH = 300;
+  private kk = 1; // active layout scale (base scale shrunk to fit the viewport height)
   private readonly disposers: Array<() => void> = [];
   private readonly tick: (t: Ticker) => void;
 
@@ -124,7 +125,8 @@ export class AutoplayDrawerView extends Container {
     this.relayout();
   }
 
-  private get k(): number {
+  /** Base scale from the screen's shorter edge (before fit-to-height). */
+  private baseK(): number {
     const s = this.screen;
     if (!s) return 1;
     return Math.max(0.78, Math.min(1.3, Math.min(s.width, s.height) / 1000));
@@ -133,9 +135,25 @@ export class AutoplayDrawerView extends Container {
   private relayout(): void {
     const s = this.screen;
     if (!s) return;
+    let k = this.baseK();
+    let h = this.layoutAt(k);
+    // Shrink the whole picker to fit the viewport height — with the loss + single-win
+    // limit groups it can be taller than a short landscape screen. Height scales with k
+    // (and chips wrap MORE as k drops), so a couple of passes converge. Floor 0.35.
+    for (let pass = 0; pass < 4 && h > s.height; pass++) {
+      k = Math.max(0.35, k * (s.height / h) * 0.97);
+      h = this.layoutAt(k);
+    }
+    this.render2();
+  }
+
+  /** Lay the sheet out at scale `k`; returns the full slide height (sheetH + 40). */
+  private layoutAt(k: number): number {
+    const s = this.screen;
+    if (!s) return 0;
+    this.kk = k;
     const W = s.width;
     const H = s.height;
-    const k = this.k;
 
     this.backdrop.clear().rect(0, 0, W, H).fill({ color: 0x000000, alpha: 1 });
     this.backdrop.hitArea = new Rectangle(0, 0, W, H);
@@ -186,11 +204,11 @@ export class AutoplayDrawerView extends Container {
     this.sheetBg.clear().rect(0, 0, W, this.sheetH + 40).fill({ color: DARK });
     this.handle.clear().rect(W / 2 - 30 * k, 13 * k, 60 * k, 5 * k).fill({ color: DIM });
 
-    this.render2();
+    return this.sheetH + 40;
   }
 
   private drawGroup(g: Group): void {
-    const k = this.k;
+    const k = this.kk;
     const cw = 86 * k;
     const ch = 64 * k;
     g.chips.forEach((chip, idx) => {

@@ -63,6 +63,11 @@ export interface ControlOverride {
   disabled?: boolean;
   currency?: CurrencySpec;
   initial?: number;
+  /** Value-display only: MINIMUM odometer column width. `0`/unset = auto — the counter
+   *  is sized tightly to the value (symbol hugs the number) and grows as it does, so
+   *  balances never clamp. Set it only to reserve a stable, wider readout. Clamped
+   *  0..18; ignored by non-value controls. Default 0 (auto). */
+  digits?: number;
 }
 
 /**

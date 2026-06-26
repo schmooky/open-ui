@@ -196,7 +196,7 @@ export class Counter extends Container {
         anchor: options.fit.anchor ?? 'left',
         gsap: options.fit.gsap,
       };
-      this.pivot.x = this.fitOpt.anchor === 'right' ? this.fullWidth : 0;
+      this.pivot.x = this.fitOpt.anchor === 'right' ? this.fullWidth : this.fitOpt.anchor === 'center' ? this.fullWidth / 2 : 0;
       const initialScale = this.computeFitScale(this.value);
       this.scale.set(initialScale);
     } else {

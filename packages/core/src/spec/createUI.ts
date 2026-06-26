@@ -96,6 +96,7 @@ export function createUI(spec: UISpec = {}, hooks: HostHooks = {}): OpenUI {
       if (c instanceof ValueDisplay) {
         if (ov.currency) c.setCurrency(ov.currency);
         if (ov.initial != null) c.set(ov.initial);
+        if (ov.digits != null) c.setDigits(ov.digits);
       }
     }
   }

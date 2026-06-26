@@ -1,6 +1,10 @@
 import { defaultTheme, extendTheme, type Theme, type DeepPartial } from './tokens';
 
-export type ThemePreset = 'default' | 'midnight' | 'neon' | 'light';
+/** Built-in presets. open-ui ships a SINGLE canonical look — black & white with a
+ *  yellow accent (the `default` token theme). Hosts restyle via `ThemeOverrides`
+ *  (sanitized colours/radius/font), so the library stays themeable without shipping
+ *  a palette zoo. Unknown preset names resolve to `default`. */
+export type ThemePreset = 'default';
 
 /**
  * The SAFE, curated surface a host may override (Charter P8 + "configure, don't
@@ -32,37 +36,9 @@ export type ThemeChoice =
   | ThemeOverrides
   | { preset?: ThemePreset; overrides?: ThemeOverrides };
 
-const midnight: Theme = extendTheme(defaultTheme, {
-  color: { accent: '#6ea8fe', accentText: '#04122e', surface: '#0d1424', surfaceAlt: '#070b14', textDim: '#5b6b86' },
-  radius: { card: 12 },
-});
-
-const neon: Theme = extendTheme(defaultTheme, {
-  color: { accent: '#ff2d95', accentText: '#0a0a0a', surface: '#14081c', surfaceAlt: '#0a0410', text: '#f0e9ff' },
-  motion: { fast: 90, base: 150, slow: 280 },
-});
-
-// A light surface: white panels with dark text + dark divider lines and a warm
-// gold accent — the "white rules card over a themed game" look.
-const light: Theme = extendTheme(defaultTheme, {
-  color: {
-    accent: '#d99000',
-    accentText: '#1a1200',
-    surface: '#ffffff',
-    surfaceAlt: '#eceef2',
-    text: '#181b20',
-    textDim: '#646c78',
-    disabled: '#c4c8d0',
-  },
-  radius: { card: 18 },
-});
-
-/** Ready-to-use themes. `default` = the neutral reference (gold on dark). */
+/** The one ready-to-use theme: black & white with a yellow accent (`defaultTheme`). */
 export const themePresets: Readonly<Record<ThemePreset, Theme>> = Object.freeze({
   default: defaultTheme,
-  midnight: Object.freeze(midnight),
-  neon: Object.freeze(neon),
-  light: Object.freeze(light),
 }) as Readonly<Record<ThemePreset, Theme>>;
 
 // A pragmatic CSS-colour check: hex (#rgb/#rgba/#rrggbb/#rrggbbaa) or rgb()/rgba().

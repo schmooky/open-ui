@@ -23,8 +23,12 @@ const ids = (page: Page): Promise<string[]> =>
 
 const CONFIGS = [
   { name: 'default', query: 'bare=1' },
-  { name: 'showcase', query: 'bare=1&theme=neon&turbo=3&autoplay=infinite&spin=hold&currency=BTC' },
+  { name: 'showcase', query: 'bare=1&turbo=3&autoplay=infinite&spin=hold&currency=BTC' },
 ];
+
+type Rect = { x: number; y: number; width: number; height: number };
+const boundsOf = (page: Page, id: string): Promise<Rect> =>
+  page.evaluate((i) => (window as unknown as { __OPENUI__: { bounds(id: string): Rect } }).__OPENUI__.bounds(i), id);
 
 test.describe('open-ui HUD — device screenshots', () => {
   for (const cfg of CONFIGS) {
@@ -66,6 +70,24 @@ test.describe('open-ui HUD — behavior via __OPENUI__', () => {
       .poll(() => page.evaluate(() => (window as unknown as { ui: { balance: { get(): number } } }).ui.balance.get()))
       .not.toBe(before); // the click reached spin → the stake was taken
   });
+
+  // Guards the headline positioning bug: the right-anchored bet rendered UNDER the
+  // centre spin button (a fit-pivot double-shift), and the readouts must hug their
+  // own corners. Asserts ordering + non-overlap directly from the live render bounds.
+  for (const currency of ['USD', 'BTC']) {
+    test(`balance sits left of spin and bet sits right of spin (${currency})`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'corner geometry asserted on the desktop layout (phones reflow/scale the bar)');
+      await page.goto(`/?bare=1&currency=${currency}`);
+      await waitForHud(page);
+      const [balance, spin, bet] = await Promise.all([boundsOf(page, 'balance'), boundsOf(page, 'spin'), boundsOf(page, 'bet')]);
+      const TOL = 6;
+      // balance entirely left of the spin button; bet entirely right of it (not under it).
+      expect(balance.x + balance.width).toBeLessThanOrEqual(spin.x + TOL);
+      expect(bet.x).toBeGreaterThanOrEqual(spin.x + spin.width - TOL);
+      // and a small value's readout is TIGHT (symbol hugs) — well under a 9-column reserve.
+      expect(bet.width).toBeLessThan(9 * 26 * 1.6);
+    });
+  }
 
   test('a spin locks the whole HUD (derived interactability)', async ({ page }) => {
     await page.goto('/?bare=1');

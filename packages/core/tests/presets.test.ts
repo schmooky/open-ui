@@ -3,10 +3,9 @@ import { resolveTheme, themePresets } from '../src/theme/presets';
 import { defaultTheme } from '../src/theme/tokens';
 
 describe('theme presets + resolveTheme (Charter P8)', () => {
-  it('ships a frozen preset map', () => {
+  it('ships ONE frozen preset — the b&w + yellow default', () => {
     expect(themePresets.default).toBe(defaultTheme);
-    expect(themePresets.midnight.color.accent).toBe('#6ea8fe');
-    expect(themePresets.neon.color.accent).toBe('#ff2d95');
+    expect(themePresets.default.color.accent).toBe('#ffc935'); // yellow accent
     expect(Object.isFrozen(themePresets)).toBe(true);
   });
 
@@ -14,14 +13,15 @@ describe('theme presets + resolveTheme (Charter P8)', () => {
     expect(resolveTheme()).toBe(defaultTheme);
   });
 
-  it('resolves a preset name', () => {
-    expect(resolveTheme('midnight').color.accent).toBe('#6ea8fe');
+  it('resolves the default preset name, and an unknown name falls back to default', () => {
+    expect(resolveTheme('default').color.accent).toBe('#ffc935');
+    expect(resolveTheme('midnight' as never)).toBe(defaultTheme); // removed preset → default
   });
 
-  it('layers overrides on a chosen preset', () => {
-    const t = resolveTheme({ preset: 'neon', overrides: { color: { accent: '#ffffff' } } });
+  it('layers overrides on the chosen preset', () => {
+    const t = resolveTheme({ preset: 'default', overrides: { color: { accent: '#ffffff' } } });
     expect(t.color.accent).toBe('#ffffff');
-    expect(t.color.text).toBe('#f0e9ff'); // neon's other tokens preserved
+    expect(t.color.text).toBe(defaultTheme.color.text); // the preset's other tokens preserved
   });
 
   it('treats a bare partial as an override on the default (un-themed-safe)', () => {
