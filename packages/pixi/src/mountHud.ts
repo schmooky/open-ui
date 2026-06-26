@@ -1,4 +1,4 @@
-import { type Application, type Ticker } from 'pixi.js';
+import { type Application } from 'pixi.js';
 import {
   createUI,
   buildPanel,
@@ -53,8 +53,15 @@ export interface BootedHud {
   /** Show the default (localizable, per-call overridable) message for an RGS status
    *  code (e.g. `'ERR_IPB'`, `'ERR_IS'`, `'ERR_MAINTENANCE'`). */
   showRgsError(code: string, opts?: RgsErrorOptions): void;
+  /** Show a FATAL error: a blocking modal that LOCKS the HUD and is dismissable only
+   *  in code (`hideNotice`) — for unrecoverable RGS states. */
+  showFatal(message: string, opts?: NoticeOptions): void;
   /** Dismiss the notice / error modal. */
   hideNotice(): void;
+  /** Social / sweepstakes mode: one switch swaps gambling wording (+ a coin → GC/SC). */
+  setSocial(on: boolean, coin?: string): void;
+  /** Switch the spin button to / from its free-spins face: `n > 0` shows "N FS". */
+  setFreeSpins(n: number): void;
   /** Enter/leave replay mode (Stake `replay=true`) — locks the HUD + shows a REPLAY badge. */
   setReplay(on: boolean): void;
   /** Show a buy-feature confirm modal (Cancel / Confirm). Texts are literal-or-key. */
@@ -94,29 +101,8 @@ export function mountHud(app: Application, spec: UISpec = {}, opts: HudOptions =
   const pixi = new OpenUIPixi(ui, { ...pixiOpts, menu, statusBar: pixiOpts.statusBar ?? spec.statusBar });
   pixi.mount(app);
 
-  // Reality-check reminder (RTS 13): every N minutes, pause + show an acknowledge
-  // modal (and stop autoplay). The timer pauses while any notice is already open.
-  let rcTick: ((t: Ticker) => void) | undefined;
-  if (spec.realityCheck && spec.realityCheck.everyMinutes > 0) {
-    const rc = spec.realityCheck;
-    const intervalMs = rc.everyMinutes * 60_000;
-    let acc = 0;
-    rcTick = (t) => {
-      if (ui.noticePanel.isOpen) return;
-      acc += t.deltaMS;
-      if (acc < intervalMs) return;
-      acc = 0;
-      if (ui.autoplay.isActive) ui.autoplay.stop();
-      ui.showNotice(
-        [
-          { kind: 'heading', id: 'rc-title', text: rc.title ?? 'openui.realityCheck.title' },
-          { kind: 'callout', id: 'rc-body', tone: 'info', text: rc.message ?? 'openui.realityCheck.message' },
-        ],
-        [{ label: 'openui.continue', variant: 'primary' }],
-      );
-    };
-    app.ticker.add(rcTick);
-  }
+  // The reality-check reminder (RTS 13) is now wired in `createUI` (core), so it runs
+  // on a wall-clock timer regardless of renderer — nothing to schedule here.
 
   // Extra declarative panels (beyond the settings menu) render as their own layers.
   const extra: PanelBodyView[] = [];
@@ -139,7 +125,6 @@ export function mountHud(app: Application, spec: UISpec = {}, opts: HudOptions =
   });
 
   const teardown = (): void => {
-    if (rcTick) app.ticker.remove(rcTick);
     offRelayout();
     for (const v of extra) v.dispose();
     extra.length = 0;
@@ -169,9 +154,14 @@ export function mountHud(app: Application, spec: UISpec = {}, opts: HudOptions =
     showNotice: (blocks, actions) => ui.showNotice(blocks, actions),
     showError: (message, opts) => ui.showError(message, opts),
     showRgsError: (code, opts) => ui.showRgsError(code, opts),
+    showFatal: (message, opts) => ui.showFatal(message, opts),
     hideNotice: () => ui.hideNotice(),
+    setSocial: (on, coin) => ui.setSocial(on, coin),
+    setFreeSpins: (n) => ui.spin.setFreeSpins(n),
     setReplay: (on) => ui.setReplay(on),
-    confirmBuy: (o) =>
+    confirmBuy: (o) => {
+      // Real guard: a jurisdiction that disabled buy-feature makes this a no-op.
+      if (ui.isDisabled('buyFeature')) return;
       ui.showNotice(
         [
           { kind: 'heading', id: 'buy-title', text: o.title ?? 'openui.buyFeature.title' },
@@ -181,7 +171,8 @@ export function mountHud(app: Application, spec: UISpec = {}, opts: HudOptions =
           { label: o.cancelLabel ?? 'openui.cancel', variant: 'secondary' },
           { label: o.confirmLabel ?? 'openui.confirm', variant: 'primary', onSelect: o.onConfirm },
         ],
-      ),
+      );
+    },
     showControls: () => pixi.setControlsVisible(true),
     hideControls: () => pixi.setControlsVisible(false),
     setControlsVisible: (v) => pixi.setControlsVisible(v),

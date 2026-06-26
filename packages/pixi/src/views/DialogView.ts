@@ -53,7 +53,10 @@ export class DialogView extends ControlView {
     this.maxWidth = opts.maxWidth ?? 520;
 
     this.backdrop.eventMode = 'static';
-    this.backdrop.on('pointertap', () => this.panel.closePanel());
+    // A blocking/fatal notice can't be tapped away — only `hideNotice` (code) closes it.
+    this.backdrop.on('pointertap', () => {
+      if (!this.ui.noticeBlocking.get()) this.panel.closePanel();
+    });
     this.buildClose();
 
     this.content.mask = this.maskG;
@@ -62,6 +65,10 @@ export class DialogView extends ControlView {
     this.applyOpen(this.panel.isOpen);
     this.disposers.push(
       this.panel.state.subscribe(() => this.applyOpen(this.panel.isOpen)),
+      // hide the ✕ when the open notice is blocking (re-renders on toggle)
+      this.ui.noticeBlocking.subscribe(() => {
+        this.closeBtn.visible = !this.ui.noticeBlocking.get();
+      }),
       this.blocks.subscribe(() => {
         if (!this.destroyed) this.relayout();
       }),
@@ -196,6 +203,7 @@ export class DialogView extends ControlView {
   private applyOpen(open: boolean): void {
     this.visible = open;
     this.eventMode = open ? 'static' : 'none';
+    this.closeBtn.visible = !this.ui.noticeBlocking.get(); // no ✕ on a blocking notice
     if (open) this.relayout();
   }
 
