@@ -390,9 +390,14 @@ export class OpenUI {
     // A blocking modal with no actions is dismissable ONLY in code (no default OK).
     this.noticeActions.set(actions && actions.length ? actions : blocking ? [] : [DEFAULT_NOTICE_ACTION]);
     this.noticeBlocking.set(blocking);
+    // Keep the blocking lock in step even if one notice REPLACES another while open
+    // (openPanel is idempotent, so the close-subscription wouldn't fire to release it).
     if (blocking && !this.noticeLockHeld) {
       this.lock();
       this.noticeLockHeld = true;
+    } else if (!blocking && this.noticeLockHeld) {
+      this.unlock();
+      this.noticeLockHeld = false;
     }
     this.noticePanel.openPanel();
     this.bus.emit('noticeShown', { blocking });
