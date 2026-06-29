@@ -8,6 +8,9 @@ const MOBILE = [390, 844] as const; //    short 390  → mobile,  portrait
 const TABLET = [820, 1180] as const; //   short 820  → tablet,  portrait
 
 const spec: UISpec = {
+  // The buy button is hidden by default; this spec reveals it so the responsive
+  // mobile override can then hide it (exercising base→bucket→restore).
+  controls: { bonus: { hidden: false } },
   responsive: {
     portrait: { controls: { spin: { layout: { anchor: 'bottom-center', offset: [0, -300] } } } },
     mobile: {

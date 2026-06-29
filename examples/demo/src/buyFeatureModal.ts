@@ -47,6 +47,8 @@ export function mountBuyFeatureModal(
   const ui = hud.ui;
   const tr = (k: string): string => ui.t(k);
   const list = features.slice(0, 4); // up to 4
+  // The buy button is hidden by default — reveal it now that a buy feature exists.
+  ui.setHidden('bonus', list.length === 0);
   const boosts = new Set<string>(); // active bet-boost ids
   const activation = opts.activation ?? 'multi';
   const blocksBuy = opts.activationBlocksBuy ?? false;

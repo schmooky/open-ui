@@ -1,6 +1,6 @@
 {
   "name": "@open-slot-ui/core",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Headless, zero-dependency core for open-ui — signals, control state-machines, theme tokens, layout, façade, event bus and introspection for slot-game UIs.",
   "keywords": [
     "slot",

@@ -115,7 +115,8 @@ function buildSpec(): UISpec {
       bet: { layout: { anchor: 'bottom-right', offset: [-186, -104], rotation: 5 } },
       'bet-plus': { layout: { anchor: 'bottom-right', offset: [-120, -188], rotation: 5 } },
       'bet-minus': { layout: { anchor: 'bottom-right', offset: [-120, -104], rotation: 5 } },
-      bonus: { layout: { anchor: 'bottom-center', offset: [740, -320] } },
+      // The buy button is hidden by default; this demo HAS a buy feature, so show it.
+      bonus: { hidden: false, layout: { anchor: 'bottom-center', offset: [740, -320] } },
       settings: { layout: { anchor: 'bottom-center', offset: [-740, -320], rotation: -5 } },
     },
     // The unified ☰ menu — every part is a modular, configurable BLOCK: a banner

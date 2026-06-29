@@ -95,7 +95,8 @@ export function createUI(spec: UISpec = {}, hooks: HostHooks = {}): OpenUI {
       const c = ui.control(id);
       if (!c) continue;
       if (ov.layout) c.layout = ov.layout;
-      if (ov.hidden) ui.hidden.add(id);
+      // `hidden` can hide OR re-show (e.g. reveal the buy button, hidden by default).
+      if (ov.hidden != null) ui.setHidden(id, ov.hidden);
       const disable = (c as { disable?: () => void }).disable;
       if (ov.disabled && typeof disable === 'function') disable.call(c);
       if (c instanceof ValueDisplay) {

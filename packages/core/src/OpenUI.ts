@@ -231,6 +231,10 @@ export class OpenUI {
     this.hidden.add('rtp');
     this.hidden.add('net-position');
     this.hidden.add('session-timer');
+    // The buy/bonus button is hidden until a host configures a buy feature (reveal it
+    // with `controls.bonus.hidden = false` or `ui.setHidden('bonus', false)`) — so a
+    // game with nothing to buy never shows a stray, purposeless button.
+    this.hidden.add('bonus');
 
     // the library owns this navigation (a biased, stateful UI)
     this.bus.on('buttonActivated', ({ id }) => {
