@@ -45,11 +45,21 @@ export class ReadoutView extends ControlView {
     this.prefix = opts.prefix ?? false;
     const fill = opts.fill ?? (opts.mono ? '#ffffff' : t.color.text);
 
-    // Figma top-corner block: one left-aligned `Label: value` line per readout —
-    // small Montserrat Regular at 50% white (the corner vignette keeps it legible).
+    // Figma top-corner block: one left-aligned `Label: value` line per readout. Sized
+    // for legibility and given a soft dark shadow so the white text stays readable on
+    // ANY background (light or dark), not just over the corner vignette.
     if (this.prefix) {
-      this.valueText = new Text({ text: '', style: { fontFamily: t.type.family, fontSize: 12, fill: opts.fill ?? '#ffffff', fontWeight: '400' } });
-      this.valueText.alpha = opts.fill ? 1 : 0.5;
+      this.valueText = new Text({
+        text: '',
+        style: {
+          fontFamily: t.type.family,
+          fontSize: 18,
+          fill: opts.fill ?? '#ffffff',
+          fontWeight: '600',
+          dropShadow: { color: 0x000000, alpha: 0.7, blur: 4, distance: 0, angle: 0 },
+        },
+      });
+      this.valueText.alpha = opts.fill ? 1 : 0.92;
       this.valueText.anchor.set(0, 0);
       this.addChild(this.valueText);
       this.disposers.push(

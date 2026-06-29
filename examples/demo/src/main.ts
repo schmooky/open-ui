@@ -172,9 +172,9 @@ function buildSpec(): UISpec {
           fullscreen: { layout: { anchor: 'top-right', offset: [-57, 57], scale: 1.5 } },
           // Compliance readouts scale up ~2× on mobile (Figma draws them larger
           // relative to the narrow frame) with wider line spacing so they don't crowd.
-          rtp: { layout: { anchor: 'top-left', offset: [14, 14], scale: 2 } },
-          'session-timer': { layout: { anchor: 'top-left', offset: [14, 44], scale: 2 } },
-          'net-position': { layout: { anchor: 'top-left', offset: [14, 80], scale: 2 } },
+          rtp: { layout: { anchor: 'top-left', offset: [16, 16], scale: 2 } },
+          'session-timer': { layout: { anchor: 'top-left', offset: [16, 66], scale: 2 } },
+          'net-position': { layout: { anchor: 'top-left', offset: [16, 116], scale: 2 } },
           balance: { layout: { anchor: 'bottom-left', offset: [36, -110], scale: 1.0, rotation: -5 } },
           bet: { layout: { anchor: 'bottom-right', offset: [-36, -110], scale: 1.0, rotation: 5 } },
         },

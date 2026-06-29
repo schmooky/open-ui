@@ -196,9 +196,9 @@ export class OpenUI {
     // compliance readouts — created hidden; a jurisdiction's display* flag reveals them
     // Figma "default" compliance block: three plain `Label: value` lines stacked in
     // the top-left corner (RTP · Session Time · Net).
-    this.rtp = new ReadoutControl({ id: 'rtp', kind: 'percent', label: 'RTP', layout: { anchor: 'top-left', offset: [18, 18] } });
-    this.sessionTimer = new ReadoutControl({ id: 'session-timer', kind: 'duration', label: 'Session Time', layout: { anchor: 'top-left', offset: [18, 36] } });
-    this.netPosition = new ReadoutControl({ id: 'net-position', kind: 'currency', label: 'Net', currency: { code: 'USD', symbol: '$', display: 'symbol', position: 'prefix', decimals: 2 }, layout: { anchor: 'top-left', offset: [18, 60] } });
+    this.rtp = new ReadoutControl({ id: 'rtp', kind: 'percent', label: 'RTP', layout: { anchor: 'top-left', offset: [20, 18] } });
+    this.sessionTimer = new ReadoutControl({ id: 'session-timer', kind: 'duration', label: 'Session Time', layout: { anchor: 'top-left', offset: [20, 46] } });
+    this.netPosition = new ReadoutControl({ id: 'net-position', kind: 'currency', label: 'Net', currency: { code: 'USD', symbol: '$', display: 'symbol', position: 'prefix', decimals: 2 }, layout: { anchor: 'top-left', offset: [20, 74] } });
 
     // notice / error modal (rendered in the unified menu style)
     this.noticePanel = new PanelControl({ id: 'notice-panel', variant: 'modal', layout: { anchor: 'center' } }, this.bus);
