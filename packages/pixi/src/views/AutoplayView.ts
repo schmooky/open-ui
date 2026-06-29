@@ -181,7 +181,6 @@ export class AutoplayView extends ControlView {
     // shows a number.
     this.countText.visible = false;
     const th = this.ui.theme;
-    const r = this.sprite ? this.target / 2 : this.radius;
 
     // While autoplay runs, this button is just a YELLOW, DISABLED indicator — the
     // spin button becomes STOP-N and is what stops autoplay. Non-interactive here.
@@ -190,11 +189,16 @@ export class AutoplayView extends ControlView {
     this.cursor = active ? 'default' : 'pointer';
 
     if (active) {
-      this.bg.clear().circle(0, 0, r).fill({ color: th.color.accent }).stroke({ width: 4, color: th.color.accentText });
+      this.bg.clear();
       if (this.sprite) {
+        // Tint the button ART yellow (white disc → accent, dark ring/glyph stay dark)
+        // so the highlight is exactly the button's size — no oversized circle behind.
         this.sprite.visible = true;
-        this.sprite.tint = th.color.accentText; // dark glyph on the yellow disc
-        this.sprite.alpha = 0.55; // reads as disabled
+        this.sprite.tint = th.color.accent;
+        this.sprite.alpha = 0.9; // slightly dimmed → reads as disabled
+      } else {
+        // Drawn fallback (no art): a yellow disc at the real button radius.
+        this.bg.circle(0, 0, this.radius).fill({ color: th.color.accent }).stroke({ width: 4, color: th.color.accentText });
       }
       return;
     }
