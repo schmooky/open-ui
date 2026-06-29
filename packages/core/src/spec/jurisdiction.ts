@@ -15,7 +15,6 @@ export interface JurisdictionConfig {
   socialCasino?: boolean;
   disabledFullscreen?: boolean;
   disabledTurbo?: boolean;
-  disabledSuperTurbo?: boolean;
   disabledAutoplay?: boolean;
   disabledSlamstop?: boolean;
   disabledSpacebar?: boolean;
@@ -55,9 +54,6 @@ export function applyJurisdiction(ui: OpenUI, jur: JurisdictionConfig | undefine
     lockHidden('bonus');
     ui.bonusButton.disable(); // the buy button can't be tapped; confirmBuy() also no-ops
   }
-  // Super-turbo off → collapse a 3-mode switcher to a 2-mode (off/on) toggle,
-  // keeping plain turbo available.
-  if (jur.disabledSuperTurbo && ui.turbo.modeCount > 2) ui.turbo.setModes(['off', 'on']);
   // Slam-stop off → the spin button locks (dims) during the spin; no tap-to-stop.
   if (jur.disabledSlamstop) ui.spin.allowSlamStop.set(false);
   // Spacebar / hold-to-spin off → no keyboard spin + each cycle needs a fresh press.

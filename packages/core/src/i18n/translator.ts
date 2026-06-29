@@ -10,6 +10,10 @@ export interface Translator {
   /** Switch the active locale (a no-op for the same locale); fires onChange. */
   setLocale(next: string): void;
   onChange(cb: (locale: string) => void): Dispose;
+  /** Switch social/sweepstakes wording on/off. In social mode `t` resolves from a
+   *  SEPARATE social dictionary first, so social copy can never be mixed into the
+   *  normal keys by accident (by design). No-op if unsupported. */
+  setSocial?(on: boolean): void;
 }
 
 /** open-ui owns this namespace; the host's translator may override any key. */
@@ -44,13 +48,6 @@ export const openuiDefaults: Record<string, string> = {
   'openui.buyFeature.title': 'Buy feature',
   'openui.buyFeature.message': 'Buy this feature now?',
   'openui.freeSpins': 'FS',
-  // ── social / sweepstakes wording (used when `ui.social` is on; see OpenUI.t) ──
-  // open-ui resolves `<key>.social` first in social mode, falling back to the base
-  // key. These are the gambling-loaded terms a sweepstakes jurisdiction must avoid;
-  // override any of them (or add `openui.bet.social` etc.) in your messages dict.
-  'openui.buyFeature.title.social': 'Play bonus',
-  'openui.buyFeature.message.social': 'Play this bonus now?',
-  'openui.win.social': 'Prize',
   // reality check (RTS 13) — {{minutes}} is interpolated by open-ui's scheduler
   'openui.realityCheck.title': 'Reality check',
   'openui.realityCheck.message': "You've been playing for {{minutes}} minutes. Take a moment before continuing.",
@@ -73,6 +70,19 @@ export const openuiDefaults: Record<string, string> = {
   'openui.err.connection.message': 'A stable connection is required. Reload to finish any open round.',
 };
 
+/**
+ * Social / sweepstakes wording — a SEPARATE dictionary (same keys as the normal
+ * ones). Kept apart on purpose so a host can never mix gambling and social copy in
+ * one map: provide your social overrides under `locale.socialMessages`, not inline.
+ */
+export const openuiSocialDefaults: Record<string, string> = {
+  'openui.bet': 'Play',
+  'openui.balance': 'Credits',
+  'openui.win': 'Prize',
+  'openui.buyFeature.title': 'Play bonus',
+  'openui.buyFeature.message': 'Play this bonus now?',
+};
+
 function interpolate(template: string, vars?: Record<string, string | number>): string {
   if (!vars) return template;
   return template.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => String(vars[k] ?? `{{${k}}}`));
@@ -85,9 +95,15 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
  */
 export class DictionaryTranslator implements Translator {
   private _locale: string;
+  private _social = false;
   private readonly subs = new Set<(locale: string) => void>();
 
-  constructor(private readonly messages: Record<string, Record<string, string>>, locale: string) {
+  constructor(
+    private readonly messages: Record<string, Record<string, string>>,
+    locale: string,
+    /** SEPARATE social/sweepstakes dictionary — consulted first in social mode. */
+    private readonly socialMessages: Record<string, Record<string, string>> = {},
+  ) {
     this._locale = locale;
   }
 
@@ -101,8 +117,18 @@ export class DictionaryTranslator implements Translator {
     for (const cb of [...this.subs]) cb(next);
   }
 
+  setSocial(on: boolean): void {
+    this._social = on;
+  }
+
   t(key: string, vars?: Record<string, string | number>): string {
-    const resolved = this.messages[this._locale]?.[key] ?? openuiDefaults[key] ?? key;
+    // Social mode resolves from the dedicated social dictionary FIRST (host social
+    // overrides → built-in social defaults), then falls back to the normal chain —
+    // so social and gambling copy are kept structurally separate.
+    const social = this._social
+      ? this.socialMessages[this._locale]?.[key] ?? openuiSocialDefaults[key]
+      : undefined;
+    const resolved = social ?? this.messages[this._locale]?.[key] ?? openuiDefaults[key] ?? key;
     return interpolate(resolved, vars);
   }
 
@@ -118,6 +144,7 @@ export class DictionaryTranslator implements Translator {
 export function dictionary(
   messages: Record<string, Record<string, string>>,
   locale: string,
+  socialMessages?: Record<string, Record<string, string>>,
 ): DictionaryTranslator {
-  return new DictionaryTranslator(messages, locale);
+  return new DictionaryTranslator(messages, locale, socialMessages);
 }

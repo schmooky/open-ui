@@ -165,7 +165,7 @@ export function mountHud(app: Application, spec: UISpec = {}, opts: HudOptions =
       ui.showNotice(
         [
           { kind: 'heading', id: 'buy-title', text: o.title ?? 'openui.buyFeature.title' },
-          { kind: 'callout', id: 'buy-body', tone: 'bonus', text: o.message ?? 'openui.buyFeature.message' },
+          { kind: 'text', id: 'buy-body', text: o.message ?? 'openui.buyFeature.message' },
         ],
         [
           { label: o.cancelLabel ?? 'openui.cancel', variant: 'secondary' },

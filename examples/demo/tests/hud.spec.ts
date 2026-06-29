@@ -137,7 +137,7 @@ test.describe('open-ui HUD — behavior via __OPENUI__', () => {
 
 // The interactive surfaces (drawer, menu, modal) — captured once, on desktop.
 test.describe('open-ui HUD — UI states', () => {
-  test('autoplay drawer, settings menu and rules modal', async ({ page }, testInfo) => {
+  test('autoplay drawer and settings menu', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'state shots captured on desktop only');
     await page.goto('/?bare=1');
     await waitForHud(page);
@@ -148,14 +148,11 @@ test.describe('open-ui HUD — UI states', () => {
     await page.evaluate(() => (window as unknown as { ui: { autoplay: { cancelPicker(): void } } }).ui.autoplay.cancelPicker());
     await page.waitForTimeout(350);
 
+    // Menu (Settings → Rules) is the demo's HTML menu, opened via the settings panel.
     await page.evaluate(() => (window as unknown as { ui: { settingsPanel: { openPanel(): void } } }).ui.settingsPanel.openPanel());
     await page.waitForTimeout(450);
     await page.screenshot({ path: `${SHOTS}state__settings-menu.png` });
     await page.evaluate(() => (window as unknown as { ui: { settingsPanel: { closePanel(): void } } }).ui.settingsPanel.closePanel());
     await page.waitForTimeout(350);
-
-    await page.evaluate(() => (window as unknown as { ui: { infoPanel: { openPanel(): void } } }).ui.infoPanel.openPanel());
-    await page.waitForTimeout(450);
-    await page.screenshot({ path: `${SHOTS}state__rules-modal.png` });
   });
 });

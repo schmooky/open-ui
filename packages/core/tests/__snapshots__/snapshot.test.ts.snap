@@ -51,18 +51,6 @@ exports[`OpenUI.snapshot() > matches the documented initial control surface 1`] 
     "state": "idle",
   },
   {
-    "id": "info-close",
-    "interactable": true,
-    "role": "button",
-    "state": "idle",
-  },
-  {
-    "id": "info-panel",
-    "interactable": false,
-    "role": "dialog",
-    "state": "closed",
-  },
-  {
     "id": "music",
     "interactable": true,
     "role": "slider",
@@ -90,12 +78,6 @@ exports[`OpenUI.snapshot() > matches the documented initial control surface 1`] 
     "id": "rtp",
     "interactable": false,
     "role": "status",
-    "state": "idle",
-  },
-  {
-    "id": "rules",
-    "interactable": true,
-    "role": "button",
     "state": "idle",
   },
   {

@@ -43,7 +43,7 @@ export function createUI(spec: UISpec = {}, hooks: HostHooks = {}): OpenUI {
   for (const issue of issues) hooks.onDataIssue?.(issue);
 
   const translator = spec.locale
-    ? new DictionaryTranslator(spec.locale.messages, spec.locale.locale)
+    ? new DictionaryTranslator(spec.locale.messages, spec.locale.locale, spec.locale.socialMessages)
     : undefined;
   // Theme overrides are sanitized; any rejected value is reported, never fatal.
   const theme = resolveTheme(spec.theme, (i) => hooks.onDataIssue?.(i));
