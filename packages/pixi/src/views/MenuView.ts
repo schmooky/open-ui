@@ -15,6 +15,17 @@ const MARGIN = 16;
 const HEADER_H = 60;
 const INSET = 22;
 
+/** The menu ships in ONE look — the light/default card — independent of the game
+ *  theme, so it can never be switched to a dark variant (matches the notice modal). */
+const LIGHT = {
+  surface: '#ffffff',
+  surfaceAlt: '#eef1f6',
+  text: '#181b20',
+  textDim: '#5b6472',
+  border: '#000000',
+  accent: '#d99000',
+} as const;
+
 /**
  * The unified MENU: one full-screen, scrollable sheet (Settings → Paytable →
  * Rules) opened by the ☰ button. It renders the composed `BlockSpec[]` through the
@@ -39,6 +50,8 @@ export class MenuView extends ControlView {
 
   private readonly titleKey: string;
   private readonly maxWidth: number;
+  /** `ui` proxy with a light theme — feeds the shared block renderer dark-on-white. */
+  private readonly lightUi: OpenUI;
   private vpW = 0;
   private vpH = 0;
   private scrollY = 0;
@@ -60,10 +73,15 @@ export class MenuView extends ControlView {
     this.titleKey = opts.title ?? 'Menu';
     this.maxWidth = opts.maxWidth ?? 1600;
 
+    // A light-themed view of `ui` (only `theme.color` swapped) so the shared block
+    // renderer always paints the menu dark-on-white — the theme can't darken it.
+    const lightTheme = { ...ui.theme, color: { ...ui.theme.color, surface: LIGHT.surface, surfaceAlt: LIGHT.surfaceAlt, text: LIGHT.text, textDim: LIGHT.textDim, accent: LIGHT.accent } };
+    this.lightUi = new Proxy(ui, { get: (t, p) => (p === 'theme' ? lightTheme : Reflect.get(t, p)) }) as OpenUI;
+
     this.backdrop.eventMode = 'static';
     this.backdrop.on('pointertap', () => this.panel.closePanel());
 
-    this.title = new Text({ text: ui.t(this.titleKey), style: { fontFamily: ui.theme.type.family, fontSize: 24, fill: ui.theme.color.text, fontWeight: '800', letterSpacing: 1 } });
+    this.title = new Text({ text: ui.t(this.titleKey), style: { fontFamily: ui.theme.type.family, fontSize: 24, fill: LIGHT.text, fontWeight: '800', letterSpacing: 1 } });
     this.title.anchor.set(0, 0.5);
 
     this.buildClose();
@@ -93,12 +111,12 @@ export class MenuView extends ControlView {
   }
 
   private buildClose(): void {
-    const t = this.ui.theme;
     const r = 22;
-    const bg = new Graphics().circle(0, 0, r).fill({ color: t.color.surfaceAlt }).stroke({ width: 2, color: t.color.textDim });
+    // Solid black circle with a white ✕ (matches the notice modal).
+    const bg = new Graphics().circle(0, 0, r).fill({ color: LIGHT.border });
     const x = new Graphics()
       .moveTo(-7, -7).lineTo(7, 7).moveTo(7, -7).lineTo(-7, 7)
-      .stroke({ width: 3, color: t.color.text });
+      .stroke({ width: 3, color: '#ffffff', cap: 'round' });
     this.closeBtn.addChild(bg, x);
     this.closeBtn.eventMode = 'static';
     this.closeBtn.cursor = 'pointer';
@@ -112,7 +130,7 @@ export class MenuView extends ControlView {
     for (const child of this.content.removeChildren()) child.destroy();
 
     const bodyW = this.vpW > 0 ? this.vpW : Math.min(this.maxWidth - INSET * 2, 520);
-    const col = buildBlockColumn(this.blocks, this.controls, this.ui, this.ticker, bodyW, { controlSkins: this.opts.controlSkins, dropdownLayer: this.dropdownLayer });
+    const col = buildBlockColumn(this.blocks, this.controls, this.lightUi, this.ticker, bodyW, { controlSkins: this.opts.controlSkins, dropdownLayer: this.dropdownLayer });
     this.childViews = col.views;
     this.content.addChild(...col.content.removeChildren());
     this.content.x = bodyW / 2; // column rows are centered at x=0
@@ -125,9 +143,8 @@ export class MenuView extends ControlView {
     const H = screen.height;
     this.position.set(0, 0);
     this.scale.set(1);
-    const t = this.ui.theme;
 
-    this.backdrop.clear().rect(0, 0, W, H).fill({ color: 0x000000, alpha: 0.62 });
+    this.backdrop.clear().rect(0, 0, W, H).fill({ color: 0x000000, alpha: 0.5 });
     this.backdrop.hitArea = new Rectangle(0, 0, W, H);
 
     // The card takes ~90% of the width (like the reference), capped on huge screens.
@@ -136,12 +153,13 @@ export class MenuView extends ControlView {
     const cardH = H - MARGIN * 2;
     const cx = (W - cardW) / 2;
     const cy = MARGIN;
-    this.card.clear().roundRect(cx, cy, cardW, cardH, t.radius.card).fill({ color: t.color.surface }).stroke({ width: 2, color: t.color.accent });
+    // Always the light card with a black border (never themed dark).
+    this.card.clear().roundRect(cx, cy, cardW, cardH, 14).fill({ color: LIGHT.surface }).stroke({ width: 2.5, color: LIGHT.border });
 
     this.headerBar.clear()
-      .roundRect(cx, cy, cardW, HEADER_H, t.radius.card)
-      .fill({ color: t.color.surfaceAlt })
-      .moveTo(cx + INSET, cy + HEADER_H).lineTo(cx + cardW - INSET, cy + HEADER_H).stroke({ width: 1, color: t.color.textDim, alpha: 0.3 });
+      .roundRect(cx, cy, cardW, HEADER_H, 14)
+      .fill({ color: LIGHT.surfaceAlt })
+      .moveTo(cx + INSET, cy + HEADER_H).lineTo(cx + cardW - INSET, cy + HEADER_H).stroke({ width: 1, color: LIGHT.textDim, alpha: 0.4 });
     this.title.position.set(cx + INSET, cy + HEADER_H / 2);
     this.closeBtn.position.set(cx + cardW - INSET - 8, cy + HEADER_H / 2);
 
