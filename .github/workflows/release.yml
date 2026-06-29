@@ -47,6 +47,12 @@ jobs:
           # and 404s. With no registry-url, pnpm uses the default registry
           # with no token, so OIDC trusted publishing kicks in.
 
+      # OIDC trusted publishing needs npm >= 11.5.1. Node 22 ships npm 10.9, and pnpm
+      # delegates the actual publish to the npm binary — so without this the publish
+      # falls back to classic auth and fails with ENEEDAUTH. Upgrade npm first.
+      - run: npm install -g npm@latest
+      - run: npm --version
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm typecheck
