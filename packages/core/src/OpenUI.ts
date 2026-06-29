@@ -196,13 +196,17 @@ export class OpenUI {
     this.betStepper = new StepperControl({ id: 'bet-stepper', layout: { anchor: 'center' }, levels: [0.5, 1, 2, 5, 10, 20], index: 1 }, this.bus);
 
     // edge controls: master mute + fullscreen (icon buttons at the screen corner)
-    this.muteButton = new ButtonControl({ id: 'mute', layout: { anchor: 'top-right', offset: [-110, 28] } }, this.bus);
-    this.fullscreenButton = new ButtonControl({ id: 'fullscreen', layout: { anchor: 'top-right', offset: [-52, 28] } }, this.bus);
+    // Figma "default": two prominent b&w round buttons in the top-right corner with a
+    // comfortable edge margin (sound on the left, fullscreen on the right).
+    this.muteButton = new ButtonControl({ id: 'mute', layout: { anchor: 'top-right', offset: [-122, 46] } }, this.bus);
+    this.fullscreenButton = new ButtonControl({ id: 'fullscreen', layout: { anchor: 'top-right', offset: [-46, 46] } }, this.bus);
 
     // compliance readouts — created hidden; a jurisdiction's display* flag reveals them
-    this.rtp = new ReadoutControl({ id: 'rtp', kind: 'percent', label: 'RTP', layout: { anchor: 'top-left', offset: [120, 96] } });
-    this.netPosition = new ReadoutControl({ id: 'net-position', kind: 'currency', label: 'Net', currency: { code: 'USD', decimals: 2 }, layout: { anchor: 'top-center', offset: [0, 56] } });
-    this.sessionTimer = new ReadoutControl({ id: 'session-timer', kind: 'duration', label: 'Session', layout: { anchor: 'top-left', offset: [120, 56] } });
+    // Figma "default" compliance block: three plain `Label: value` lines stacked in
+    // the top-left corner (RTP · Session Time · Net).
+    this.rtp = new ReadoutControl({ id: 'rtp', kind: 'percent', label: 'RTP', layout: { anchor: 'top-left', offset: [18, 18] } });
+    this.sessionTimer = new ReadoutControl({ id: 'session-timer', kind: 'duration', label: 'Session Time', layout: { anchor: 'top-left', offset: [18, 36] } });
+    this.netPosition = new ReadoutControl({ id: 'net-position', kind: 'currency', label: 'Net', currency: { code: 'USD', symbol: '$', display: 'symbol', position: 'prefix', decimals: 2 }, layout: { anchor: 'top-left', offset: [18, 60] } });
 
     // notice / error modal (rendered in the unified menu style)
     this.noticePanel = new PanelControl({ id: 'notice-panel', variant: 'modal', layout: { anchor: 'center' } }, this.bus);

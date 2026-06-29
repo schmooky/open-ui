@@ -200,9 +200,10 @@ export class AutoplayDrawerView extends Container {
     this.startBtn.hitArea = new Rectangle(-startW / 2, -startH / 2, startW, startH);
 
     this.sheetH = startY + startH / 2 + 20 * k;
-    // flat, square, borderless sheet (no rounded corners / stroke)
-    this.sheetBg.clear().rect(0, 0, W, this.sheetH + 40).fill({ color: DARK });
-    this.handle.clear().rect(W / 2 - 30 * k, 13 * k, 60 * k, 5 * k).fill({ color: DIM });
+    // Flat, square, edge-to-edge sheet. Drawn 1px past each side and far past the
+    // bottom so no antialiased seam or gap can ever show at the edges.
+    this.sheetBg.clear().rect(-1, 0, W + 2, this.sheetH + 40 + 600).fill({ color: DARK });
+    this.handle.clear().roundRect(W / 2 - 30 * k, 13 * k, 60 * k, 5 * k, 2.5 * k).fill({ color: DIM });
 
     return this.sheetH + 40;
   }

@@ -227,7 +227,7 @@ describe('notice / error modal', () => {
     const ui = createUI({});
     ui.showError('Boom');
     expect(ui.noticePanel.isOpen).toBe(true);
-    expect(ui.noticeBlocks.get().some((b) => b.kind === 'callout' && b.text === 'Boom')).toBe(true);
+    expect(ui.noticeBlocks.get().some((b) => b.kind === 'text' && b.text === 'Boom')).toBe(true);
     expect(ui.noticeActions.get().length).toBe(1);
   });
   it('showNotice accepts custom action buttons (host callbacks)', () => {
@@ -241,13 +241,13 @@ describe('notice / error modal', () => {
     ui.autoplay.begin(10);
     ui.showRgsError('ERR_IPB');
     expect(ui.autoplay.isActive).toBe(false);
-    expect(ui.noticeBlocks.get().some((b) => b.kind === 'callout' && b.text === 'openui.err.insufficient.message')).toBe(true);
+    expect(ui.noticeBlocks.get().some((b) => b.kind === 'text' && b.text === 'openui.err.insufficient.message')).toBe(true);
   });
   it('showRgsError lets the host override the EXACT text', () => {
     const ui = createUI({});
     ui.showRgsError('ERR_IPB', { title: 'Out of cash', message: 'Top up to keep playing' });
     expect(ui.noticeBlocks.get().some((b) => b.kind === 'heading' && b.text === 'Out of cash')).toBe(true);
-    expect(ui.noticeBlocks.get().some((b) => b.kind === 'callout' && b.text === 'Top up to keep playing')).toBe(true);
+    expect(ui.noticeBlocks.get().some((b) => b.kind === 'text' && b.text === 'Top up to keep playing')).toBe(true);
   });
 });
 

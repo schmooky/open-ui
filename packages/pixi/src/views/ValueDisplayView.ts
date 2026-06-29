@@ -1,12 +1,14 @@
-import { Container, Text, type Ticker } from 'pixi.js';
+import { Container, Graphics, Text, type Ticker } from 'pixi.js';
 import { type ValueDisplay, type OpenUI, displayDigits, valueFitMaxWidth } from '@open-slot-ui/core';
 import { Counter, type CounterOptions, type GsapLike } from 'pixi-text-counter';
 import { ControlView } from './ControlView';
 import { TextCellRenderer } from '../renderers/TextCellRenderer';
 
-const DIGIT_W = 26;
-const DIGIT_H = 46;
-const FONT_SIZE = 40;
+// Each digit column is masked to DIGIT_W × DIGIT_H, so these must leave room for the
+// bold outline + drop shadow or the glyphs get clipped.
+const DIGIT_W = 39;
+const DIGIT_H = 68;
+const FONT_SIZE = 48;
 /** Fixed fit budget floor (columns): values up to ~this width render full size; wider
  *  ones scale down so the readout never spills toward its neighbours. */
 const FIT_BUDGET_COLS = 9;
@@ -23,6 +25,7 @@ type Side = 'left' | 'right' | 'center';
 export class ValueDisplayView extends ControlView {
   private counter: Counter | undefined;
   private caption: Text | undefined;
+  private captionPill: Graphics | undefined;
 
   constructor(
     private readonly vd: ValueDisplay,
@@ -62,6 +65,10 @@ export class ValueDisplayView extends ControlView {
   }
 
   private side(): Side {
+    // Mirror the anchor: a left-anchored readout (Balance) has its ORIGIN on the left
+    // and grows rightward; a right-anchored one (Bet) has its origin on the right and
+    // grows LEFTWARD — so a growing bet value never runs over the bet ± buttons that
+    // sit to its right. The `fit` auto-scale pivots at this same edge.
     const a = this.vd.layout.anchor;
     return a.includes('left') ? 'left' : a.includes('right') ? 'right' : 'center';
   }
@@ -71,16 +78,25 @@ export class ValueDisplayView extends ControlView {
     const side = this.side();
 
     if (this.vd.label) {
-      // A dimmed tint of the VALUE colour (not the theme's separate dim hue, which
-      // can clash with the background) → a clean caption that harmonizes anywhere.
+      // Figma "default" look: the caption is a bold white word on a solid black pill
+      // (Баланс / Ставка), floating just above the outlined value.
       this.caption = new Text({
-        text: this.ui.t(this.vd.label).toUpperCase(),
-        style: { fontFamily: theme.type.family, fontSize: 13, fill: theme.color.text, fontWeight: '700', letterSpacing: 2 },
+        // Figma: the label is NOT uppercased — "Баланс" / "Ставка" as authored.
+        text: this.ui.t(this.vd.label),
+        style: { fontFamily: theme.type.family, fontSize: 28, fill: 0xffffff, fontWeight: '900', letterSpacing: 0 },
       });
-      this.caption.alpha = 0.55;
-      this.caption.anchor.set(side === 'left' ? 0 : side === 'right' ? 1 : 0.5, 1);
-      this.caption.y = -DIGIT_H / 2 - 3;
-      this.addChild(this.caption);
+      this.caption.anchor.set(0.5, 0.5);
+
+      const padX = 24;
+      const padY = 8;
+      const pillW = Math.ceil(this.caption.width) + padX * 2;
+      const pillH = Math.ceil(this.caption.height) + padY * 2;
+      // Anchor the pill to the value's side so it lines up with the number below it.
+      const pillX = side === 'left' ? 0 : side === 'right' ? -pillW : -pillW / 2;
+      const pillY = -DIGIT_H / 2 - pillH - 14; // ~24px gap above the value (Figma)
+      this.captionPill = new Graphics().roundRect(pillX, pillY, pillW, pillH, 12).fill({ color: 0x000000 });
+      this.caption.position.set(pillX + pillW / 2, pillY + pillH / 2);
+      this.addChild(this.captionPill, this.caption);
     }
 
     const cur = this.vd.currency.get();
@@ -95,7 +111,16 @@ export class ValueDisplayView extends ControlView {
     const side = this.side();
 
     const renderer = new TextCellRenderer({
-      style: { fontFamily: theme.type.family, fontSize: FONT_SIZE, fill: theme.color.text, fontWeight: '700' },
+      // Figma "default" readout: Montserrat Black, white, with a bold BLACK OUTLINE
+      // plus a soft drop shadow (0px 4px, 25% black) under it.
+      style: {
+        fontFamily: theme.type.family,
+        fontSize: FONT_SIZE,
+        fill: 0xffffff,
+        fontWeight: '900',
+        stroke: { color: 0x000000, width: 8, join: 'round' },
+        dropShadow: { color: 0x000000, alpha: 0.25, blur: 2, distance: 4, angle: Math.PI / 2 },
+      },
       digitWidth: DIGIT_W,
       digitHeight: DIGIT_H,
       // no fillerChar → rolling cells show real digits (crisp, no blur, no blank flicker)
@@ -150,8 +175,10 @@ export class ValueDisplayView extends ControlView {
   private rebuild(): void {
     this.counter?.destroy();
     this.caption?.destroy();
+    this.captionPill?.destroy();
     this.counter = undefined;
     this.caption = undefined;
+    this.captionPill = undefined;
     this.removeChildren();
     this.build();
   }

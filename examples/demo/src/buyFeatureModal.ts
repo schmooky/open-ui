@@ -145,7 +145,10 @@ export function mountBuyFeatureModal(
       // Activation NEVER closes the modal. 'single' keeps at most one boost on.
       const wasActive = boosts.has(id);
       if (activation === 'single') boosts.clear();
-      if (!wasActive) boosts.add(id); // toggle (single-clear above already removed it)
+      // Toggle: an already-active boost turns OFF; otherwise it turns ON. (In multi
+      // mode the clear() above doesn't run, so we must delete explicitly to deactivate.)
+      if (wasActive) boosts.delete(id);
+      else boosts.add(id);
       ui.bus.emit('cardActivated', { id });
       renderCards();
       opts.onActivate?.([...boosts], id, boosts.has(id));
@@ -184,7 +187,9 @@ export function mountBuyFeatureModal(
 const BFM_CSS = `
 .bfm-root { position: fixed; inset: 0; z-index: 11000; display: grid; place-items: center; font-family: var(--font); opacity: 0; pointer-events: none; transition: opacity .18s ease; }
 .bfm-root.open { opacity: 1; pointer-events: auto; }
-.bfm-backdrop { position: absolute; inset: 0; background: rgba(8,6,4,.5); backdrop-filter: blur(10px) saturate(1.1); }
+/* Backdrop blur ANIMATES in (the filter radius ramps up), instead of snapping on. */
+.bfm-backdrop { position: absolute; inset: 0; background: rgba(8,6,4,0); backdrop-filter: blur(0px) saturate(1); -webkit-backdrop-filter: blur(0px) saturate(1); transition: background .4s ease, backdrop-filter .4s ease, -webkit-backdrop-filter .4s ease; }
+.bfm-root.open .bfm-backdrop { background: rgba(8,6,4,.5); backdrop-filter: blur(10px) saturate(1.1); -webkit-backdrop-filter: blur(10px) saturate(1.1); }
 .bfm-x { position: absolute; top: 18px; right: 22px; width: 46px; height: 46px; border-radius: 999px; border: 0; background: rgba(18,14,10,.82); color: #fff; font-size: 18px; cursor: pointer; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,.45); z-index: 2; transition: transform .12s, background .12s; }
 .bfm-x:hover { transform: scale(1.08); background: rgba(18,14,10,.95); }
 .bfm-root *, .bfm-root *::before, .bfm-root *::after { box-sizing: border-box; }
@@ -194,21 +199,21 @@ const BFM_CSS = `
 .bfm-fit { position: absolute; top: 0; left: 50%; transform: translateX(-50%); transform-origin: top center; }
 .bfm-title { margin: 0 0 14px; text-align: center; color: #fff; font-size: 30px; font-weight: 800; letter-spacing: 1px; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
 .bfm-bet { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 0 0 24px; }
-.bfm-betbox { min-width: 200px; padding: 10px 22px; border-radius: 12px; background: var(--surface); border: 1.5px solid #000; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.bfm-betbox { min-width: 200px; padding: 10px 22px; border-radius: 12px; background: var(--surface); border: 3px solid #000; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
 .bfm-betlabel { font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
 .bfm-betbox b { font-size: 24px; color: var(--text); }
-.bfm-step { flex: none; width: 54px; height: 54px; border-radius: 999px; border: 1.5px solid #000; background: var(--surface); color: var(--text); font-size: 28px; font-weight: 800; cursor: pointer; display: grid; place-items: center; line-height: 1; transition: transform .1s, background .12s; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.bfm-step { flex: none; width: 54px; height: 54px; border-radius: 999px; border: 3px solid #000; background: var(--surface); color: var(--text); font-size: 28px; font-weight: 800; cursor: pointer; display: grid; place-items: center; line-height: 1; transition: transform .1s, background .12s; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
 .bfm-step:hover { background: var(--surface-alt); }
 .bfm-step:active { transform: scale(.92); }
 .bfm-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; align-items: start; }
 .bfm-cell { display: flex; flex-direction: column; min-width: 0; }
-.bfm-card { background: var(--surface); border: 2.5px solid #000; border-radius: 14px; overflow: hidden; box-shadow: 0 14px 34px rgba(0,0,0,.45); }
+.bfm-card { background: var(--surface); border: 4px solid #000; border-radius: 14px; overflow: hidden; box-shadow: 0 14px 34px rgba(0,0,0,.45); }
 .bfm-cardimg { width: 100%; aspect-ratio: 16 / 10; background-size: cover; background-position: center; }
 .bfm-strip { height: 8px; background: linear-gradient(90deg, #f0a500, #ffd166, #f0a500); }
 .bfm-cardbody { padding: 12px 14px 16px; text-align: center; }
 .bfm-name { display: block; font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bfm-price { display: block; margin-top: 2px; font-size: 22px; font-weight: 800; color: var(--text); }
-.bfm-action { display: block; width: 100%; margin-top: 12px; padding: 14px 10px; border-radius: 12px; border: 2.5px solid #000; background: var(--surface); color: var(--text); font-size: 15px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; transition: transform .1s, background .12s, color .12s; box-shadow: 0 5px 14px rgba(0,0,0,.35); white-space: nowrap; }
+.bfm-action { display: block; width: 100%; margin-top: 12px; padding: 14px 10px; border-radius: 12px; border: 4px solid #000; background: var(--surface); color: var(--text); font-size: 15px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; transition: transform .1s, background .12s, color .12s; box-shadow: 0 5px 14px rgba(0,0,0,.35); white-space: nowrap; }
 .bfm-action:hover { background: var(--surface-alt); }
 .bfm-action:active { transform: scale(.96); }
 .bfm-action.is-active { background: var(--accent); color: var(--accent-text); border-color: #000; }

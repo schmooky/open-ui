@@ -18,7 +18,7 @@ interface Base {
 }
 
 function cloneLayout(l: LayoutSpec): LayoutSpec {
-  return { anchor: l.anchor, offset: l.offset ? [l.offset[0], l.offset[1]] : undefined, scale: l.scale };
+  return { anchor: l.anchor, offset: l.offset ? [l.offset[0], l.offset[1]] : undefined, scale: l.scale, rotation: l.rotation };
 }
 
 /** The buckets that apply to a screen, least → most specific (size wins over orientation). */

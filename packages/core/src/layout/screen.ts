@@ -30,8 +30,11 @@ export interface LayoutConfig {
 }
 
 export const defaultLayoutConfig: LayoutConfig = {
+  // Reference design frames, matching the Figma "DEF" frames 1:1 so offsets map
+  // directly: desktop 1920×1080, mobile 360×779 (×3 = 1080×2337). The portrait
+  // aspect matches real phones (~0.46), so scaling no longer squashes vertically.
   refLandscape: [1920, 1080],
-  refPortrait: [1080, 1920],
+  refPortrait: [1080, 2337],
   portraitBelowAspect: 0.85,
   breakpoints: { mobile: 480, tablet: 840 },
 };

@@ -10,9 +10,22 @@ export interface DialogViewOptions {
 }
 
 const INSET = 24;
-const BTN_H = 50;
-const BTN_GAP = 12;
+const BTN_H = 52;
+const BTN_GAP = 14;
 const ROW_GAP = 16;
+
+/** The Figma "default" modal is a WHITE card (independent of the dark game theme),
+ *  matching the menu / buy-feature sheets: dark text on white, a black border, a
+ *  black primary pill and a white outline secondary. */
+const LIGHT = {
+  surface: '#ffffff',
+  surfaceAlt: '#eef1f6',
+  text: '#181b20',
+  textDim: '#5b6472',
+  border: '#000000',
+  primary: '#0a0a0a',
+  primaryText: '#ffffff',
+} as const;
 
 interface BuiltButton {
   node: Container;
@@ -39,6 +52,9 @@ export class DialogView extends ControlView {
   private childViews: ControlView[] = [];
   private screen: ScreenState | undefined;
   private readonly maxWidth: number;
+  /** `ui` proxy with a light theme — so the shared block renderer draws dark-on-white
+   *  content inside the white modal card (Figma "default" dialog look). */
+  private readonly lightUi: OpenUI;
 
   constructor(
     private readonly panel: PanelControl,
@@ -51,6 +67,11 @@ export class DialogView extends ControlView {
     super(panel, ui);
     this.zIndex = 130; // above the menu (120)
     this.maxWidth = opts.maxWidth ?? 520;
+
+    // A light-themed view of the same `ui` (only `theme.color` swapped) so the shared
+    // block renderer paints dark text on the white card; everything else forwards.
+    const lightTheme = { ...ui.theme, color: { ...ui.theme.color, surface: LIGHT.surface, surfaceAlt: LIGHT.surfaceAlt, text: LIGHT.text, textDim: LIGHT.textDim } };
+    this.lightUi = new Proxy(ui, { get: (t, p) => (p === 'theme' ? lightTheme : Reflect.get(t, p)) }) as OpenUI;
 
     this.backdrop.eventMode = 'static';
     // A blocking/fatal notice can't be tapped away — only `hideNotice` (code) closes it.
@@ -82,10 +103,10 @@ export class DialogView extends ControlView {
   }
 
   private buildClose(): void {
-    const t = this.ui.theme;
-    const r = 18;
-    const bg = new Graphics().circle(0, 0, r).fill({ color: t.color.surfaceAlt }).stroke({ width: 2, color: t.color.textDim });
-    const x = new Graphics().moveTo(-6, -6).lineTo(6, 6).moveTo(6, -6).lineTo(-6, 6).stroke({ width: 3, color: t.color.text });
+    const r = 22;
+    // Figma: a solid black circle with a white ✕, sitting at the card's top-right.
+    const bg = new Graphics().circle(0, 0, r).fill({ color: LIGHT.primary });
+    const x = new Graphics().moveTo(-7, -7).lineTo(7, 7).moveTo(7, -7).lineTo(-7, 7).stroke({ width: 3, color: '#ffffff', cap: 'round' });
     this.closeBtn.addChild(bg, x);
     this.closeBtn.eventMode = 'static';
     this.closeBtn.cursor = 'pointer';
@@ -106,7 +127,6 @@ export class DialogView extends ControlView {
     if (!this.panel.isOpen) return;
     const W = s.width;
     const H = s.height;
-    const t = this.ui.theme;
 
     for (const v of this.childViews) v.dispose();
     this.childViews.length = 0;
@@ -114,7 +134,7 @@ export class DialogView extends ControlView {
 
     const cardW = Math.min(W - 48, this.maxWidth);
     const innerW = cardW - INSET * 2;
-    const col = buildBlockColumn(this.blocks.get(), [], this.ui, this.ticker, innerW, { controlSkins: this.opts.controlSkins });
+    const col = buildBlockColumn(this.blocks.get(), [], this.lightUi, this.ticker, innerW, { controlSkins: this.opts.controlSkins });
     this.childViews = col.views;
     const kids = col.content.removeChildren();
     if (kids.length) this.content.addChild(...kids);
@@ -127,9 +147,10 @@ export class DialogView extends ControlView {
     const cx = (W - cardW) / 2;
     const cy = (H - cardH) / 2;
 
-    this.backdrop.clear().rect(0, 0, W, H).fill({ color: 0x000000, alpha: 0.62 });
+    this.backdrop.clear().rect(0, 0, W, H).fill({ color: 0x000000, alpha: 0.5 });
     this.backdrop.hitArea = new Rectangle(0, 0, W, H);
-    this.card.clear().roundRect(cx, cy, cardW, cardH, t.radius.card).fill({ color: t.color.surface }).stroke({ width: 2, color: t.color.accent });
+    // White card with a crisp black border (Figma "default" modal).
+    this.card.clear().roundRect(cx, cy, cardW, cardH, 14).fill({ color: LIGHT.surface }).stroke({ width: 2.5, color: LIGHT.border });
 
     const bodyH = cardH - (buttonsH ? ROW_GAP + buttonsH + INSET : INSET);
     this.content.x = cx + cardW / 2;
@@ -137,7 +158,7 @@ export class DialogView extends ControlView {
     this.maskG.clear().rect(cx, cy, cardW, Math.max(0, bodyH)).fill({ color: 0xffffff });
 
     this.buttons.position.set(cx + cardW / 2, cy + cardH - INSET / 2 - buttonsH / 2);
-    this.closeBtn.position.set(cx + cardW - 20, cy + 20);
+    this.closeBtn.position.set(cx + cardW - 8, cy + 8); // sits on the top-right corner
   }
 
   /** Build the footer buttons from `noticeActions` into a centered row (shrunk to
@@ -173,7 +194,7 @@ export class DialogView extends ControlView {
     const bg = new Graphics();
     const label = new Text({
       text: this.ui.t(action.label),
-      style: { fontFamily: t.type.family, fontSize: 18, fontWeight: '800', fill: variant === 'primary' ? t.color.accentText : t.color.text, letterSpacing: 0.5 },
+      style: { fontFamily: t.type.family, fontSize: 18, fontWeight: '800', fill: variant === 'primary' ? LIGHT.primaryText : LIGHT.text, letterSpacing: 0.5 },
     });
     label.anchor.set(0.5);
     node.addChild(bg, label);
@@ -191,12 +212,12 @@ export class DialogView extends ControlView {
   }
 
   private drawButton(bg: Graphics, variant: 'primary' | 'secondary', width: number): void {
-    const t = this.ui.theme;
     bg.clear();
+    // Figma: primary is a solid black pill; secondary is a white pill with a black border.
     if (variant === 'primary') {
-      bg.roundRect(-width / 2, -BTN_H / 2, width, BTN_H, BTN_H / 2).fill({ color: t.color.accent });
+      bg.roundRect(-width / 2, -BTN_H / 2, width, BTN_H, BTN_H / 2).fill({ color: LIGHT.primary });
     } else {
-      bg.roundRect(-width / 2, -BTN_H / 2, width, BTN_H, BTN_H / 2).fill({ color: t.color.surfaceAlt }).stroke({ width: 2, color: t.color.accent });
+      bg.roundRect(-width / 2, -BTN_H / 2, width, BTN_H, BTN_H / 2).fill({ color: LIGHT.surface }).stroke({ width: 2.5, color: LIGHT.border });
     }
   }
 

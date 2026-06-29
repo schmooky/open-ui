@@ -46,7 +46,7 @@ describe('resolvePlacement', () => {
 
 describe('computeScreen', () => {
   it('picks portrait below the configured aspect and scales to the portrait reference', () => {
-    const s = computeScreen(1080, 1920, defaultLayoutConfig);
+    const s = computeScreen(1080, 2337, defaultLayoutConfig);
     expect(s.orientation).toBe('portrait');
     expect(s.scale).toBe(1);
   });

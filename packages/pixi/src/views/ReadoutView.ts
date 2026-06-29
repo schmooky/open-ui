@@ -9,6 +9,10 @@ export interface ReadoutViewOptions {
   inline?: boolean;
   /** Force black-and-white text (white on a dark bar), ignoring the theme accent/text hue. */
   mono?: boolean;
+  /** Single left-aligned `Label: value` line (the Figma top-corner block). */
+  prefix?: boolean;
+  /** Explicit text colour (else the theme text colour). Lets a light-bg host darken it. */
+  fill?: string;
 }
 
 /** Seconds → "M:SS" or "H:MM:SS". */
@@ -32,12 +36,34 @@ export class ReadoutView extends ControlView {
   private readonly caption?: Text;
   private readonly valueText: Text;
   private readonly tick?: (t: Ticker) => void;
+  private readonly prefix: boolean;
 
   constructor(private readonly ro: ReadoutControl, ui: OpenUI, private readonly ticker: Ticker, opts: ReadoutViewOptions = {}) {
     super(ro, ui);
     const t = ui.theme;
     const inline = opts.inline ?? false;
-    const fill = opts.mono ? '#ffffff' : t.color.text;
+    this.prefix = opts.prefix ?? false;
+    const fill = opts.fill ?? (opts.mono ? '#ffffff' : t.color.text);
+
+    // Figma top-corner block: one left-aligned `Label: value` line per readout —
+    // small Montserrat Regular at 50% white (the corner vignette keeps it legible).
+    if (this.prefix) {
+      this.valueText = new Text({ text: '', style: { fontFamily: t.type.family, fontSize: 12, fill: opts.fill ?? '#ffffff', fontWeight: '400' } });
+      this.valueText.alpha = opts.fill ? 1 : 0.5;
+      this.valueText.anchor.set(0, 0);
+      this.addChild(this.valueText);
+      this.disposers.push(
+        this.ro.value.subscribe(() => this.render()),
+        this.ui.locale.subscribe(() => { if (!this.destroyed) this.render(); }),
+      );
+      if (this.ro.currency) this.disposers.push(this.ro.currency.subscribe(() => this.render()));
+      if (this.ro.kind === 'duration') {
+        this.tick = (tk) => this.ro.tick(tk.deltaMS / 1000);
+        this.ticker.add(this.tick);
+      }
+      this.render();
+      return;
+    }
 
     if (ro.label) {
       this.caption = new Text({
@@ -96,7 +122,7 @@ export class ReadoutView extends ControlView {
       default:
         text = String(v);
     }
-    this.valueText.text = text;
+    this.valueText.text = this.prefix && this.ro.label ? `${this.ui.t(this.ro.label)}: ${text}` : text;
   }
 
   override dispose(): void {

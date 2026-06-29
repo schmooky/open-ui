@@ -77,6 +77,12 @@ export interface OpenUIPixiOptions {
    */
   statusBar?: StatusBarSide;
   /**
+   * Text colour for the top-corner compliance readouts (RTP / net / session). Defaults
+   * to the theme text colour; a light-background host can pass a dark colour so the
+   * Figma-style `Label: value` block stays legible.
+   */
+  readoutColor?: string;
+  /**
    * How the interactive HUD appears on mount: `'shown'` (default), `'hidden'` (off
    * screen + non-interactive; reveal later with `showControls()`), or `'slide-in'`
    * (start hidden, then slide in from the edges).
@@ -146,7 +152,7 @@ export class OpenUIPixi {
       glyph: 'menu',
       iconTexture: ic.settingsIdle,
       iconTarget: 88,
-      mono: true, // b&w like the turbo button (used on the drawn glyph path)
+      dark: true, // Figma ☰: solid black circle, white bars, no ring
     });
     settingsView.zIndex = 5;
 
@@ -158,7 +164,7 @@ export class OpenUIPixi {
       offTexture: ic.turboOff,
       onTexture: ic.turboOn,
       modeTextures: ic.turboModes,
-      target: 88,
+      target: 79,
     });
     const spinOff = this.ui.spin.layout.offset ?? [0, 0];
     const autoOff = this.ui.autoplay.layout.offset ?? [0, 0];
@@ -166,27 +172,28 @@ export class OpenUIPixi {
     const autoplayView = new AutoplayView(this.ui.autoplay, this.ui, ticker, {
       idleTexture: ic.autoIdle,
       activeTexture: ic.autoActive,
-      target: 88,
+      target: 73,
       picker,
       arcCenter: { x: spinOff[0] - autoOff[0], y: spinOff[1] - autoOff[1] },
       arcStepDeg: 22,
     });
     autoplayView.zIndex = 20;
-    const bonusView = new ButtonView(this.ui.bonusButton, this.ui, ticker, { shape: 'circle', radius: 44, iconTexture: ic.bonus, iconTarget: 110 });
+    const bonusView = new ButtonView(this.ui.bonusButton, this.ui, ticker, { shape: 'circle', radius: 60, iconTexture: ic.bonus, iconTarget: 130 });
     const betPlusView = new ButtonView(this.ui.betPlus, this.ui, ticker, { shape: 'circle', radius: 30, iconTexture: ic.betPlus, iconTarget: 64 });
     const betMinusView = new ButtonView(this.ui.betMinus, this.ui, ticker, { shape: 'circle', radius: 30, iconTexture: ic.betMinus, iconTarget: 64 });
 
     // edge controls (master mute + fullscreen) — b&w "mono" buttons like turbo.
-    const muteView = new ButtonView(this.ui.muteButton, this.ui, ticker, { shape: 'circle', radius: 22, glyph: 'speaker', iconTarget: 44, mono: true });
-    const fullscreenView = new ButtonView(this.ui.fullscreenButton, this.ui, ticker, { shape: 'circle', radius: 22, glyph: 'fullscreen', iconTarget: 44, mono: true });
+    const muteView = new ButtonView(this.ui.muteButton, this.ui, ticker, { shape: 'circle', radius: 30, glyph: 'speaker', iconTarget: 60, mono: true });
+    const fullscreenView = new ButtonView(this.ui.fullscreenButton, this.ui, ticker, { shape: 'circle', radius: 30, glyph: 'fullscreen', iconTarget: 60, mono: true });
     muteView.zIndex = 65; // above the status bar (60) so they read as part of it
     fullscreenView.zIndex = 65;
     // Compliance readouts (RTP / net / session): in a thin status bar if configured,
     // else at screen corners. Bar items are created inline by the StatusBarView.
     const statusBarSide = this.opts.statusBar;
-    const rtpView = statusBarSide ? undefined : new ReadoutView(this.ui.rtp, this.ui, ticker);
-    const netView = statusBarSide ? undefined : new ReadoutView(this.ui.netPosition, this.ui, ticker);
-    const timerView = statusBarSide ? undefined : new ReadoutView(this.ui.sessionTimer, this.ui, ticker);
+    const roOpts = { prefix: true, fill: this.opts.readoutColor } as const;
+    const rtpView = statusBarSide ? undefined : new ReadoutView(this.ui.rtp, this.ui, ticker, roOpts);
+    const netView = statusBarSide ? undefined : new ReadoutView(this.ui.netPosition, this.ui, ticker, roOpts);
+    const timerView = statusBarSide ? undefined : new ReadoutView(this.ui.sessionTimer, this.ui, ticker, roOpts);
 
     // Every view is mounted; `ui.hidden` only toggles VISIBILITY (so a responsive
     // breakpoint can show/hide a control at runtime — Charter P10). Hidden views
@@ -288,6 +295,24 @@ export class OpenUIPixi {
       const bar = new StatusBarView([this.ui.netPosition, this.ui.rtp, this.ui.sessionTimer], this.ui, ticker, statusBarSide);
       this.root.addChild(bar);
       this.overlays.push(bar);
+    } else {
+      // Figma: a soft dark radial vignette in the top-left corner keeps the white 50%
+      // RTP/session/net readouts legible over any background.
+      const vignette = new Graphics();
+      vignette.zIndex = -1; // behind the readout text views
+      this.root.addChild(vignette);
+      this.overlays.push({
+        applyLayout: (s) => {
+          const r = 200 * s.scale;
+          vignette.clear();
+          // concentric rings fading out from the corner approximate a radial gradient
+          for (let i = 0; i < 14; i++) {
+            const t = i / 14;
+            vignette.circle(0, 0, r * (1 - t)).fill({ color: 0x000000, alpha: 0.5 / 14 });
+          }
+        },
+        dispose: () => { if (!vignette.destroyed) vignette.destroy(); },
+      });
     }
 
     // REPLAY badge (Stake replay mode) — a pill shown while `ui.replay` is true.
@@ -320,23 +345,8 @@ export class OpenUIPixi {
       }),
     );
 
-    // the settings button toggles ☰ ↔ ✕ with the popover's open state
-    if (ic.settingsIdle && ic.settingsActive) {
-      const idle = ic.settingsIdle;
-      const active = ic.settingsActive;
-      this.disposers.push(
-        this.ui.settingsPanel.state.subscribe(() => {
-          settingsView.setIconTexture(this.ui.settingsPanel.isOpen ? active : idle);
-        }),
-      );
-    } else {
-      // no art → the mono ☰ glyph toggles to ✕ when the menu opens
-      this.disposers.push(
-        this.ui.settingsPanel.state.subscribe(() => {
-          settingsView.setGlyph(this.ui.settingsPanel.isOpen ? 'close' : 'menu');
-        }),
-      );
-    }
+    // The ☰ menu button keeps the SAME look whether the menu is open or closed —
+    // it only ever opens the menu, so it never morphs into a ✕.
 
     const applyLayout = (): void => {
       const screen = this.ui.screen.get();
