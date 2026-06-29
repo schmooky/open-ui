@@ -115,9 +115,6 @@ export class OpenUI {
   readonly settingsPanel: PanelControl;
   readonly musicSlider: SliderControl;
   readonly sfxSlider: SliderControl;
-  readonly rulesButton: ButtonControl;
-  readonly infoPanel: PanelControl;
-  readonly infoClose: ButtonControl;
   readonly turbo: TurboControl;
   readonly autoplay: AutoplayControl;
   readonly bonusButton: ButtonControl;
@@ -178,11 +175,6 @@ export class OpenUI {
     );
     this.musicSlider = new SliderControl({ id: 'music', label: 'Music', layout: { anchor: 'center' }, initial: 0.7 }, this.bus);
     this.sfxSlider = new SliderControl({ id: 'sfx', label: 'Sound', layout: { anchor: 'center' }, initial: 0.5 }, this.bus);
-    this.rulesButton = new ButtonControl({ id: 'rules', label: 'Rules', layout: { anchor: 'center' } }, this.bus);
-
-    // the full-screen rules/info modal + its close button
-    this.infoPanel = new PanelControl({ id: 'info-panel', variant: 'modal', title: 'Game Info', layout: { anchor: 'center' } }, this.bus);
-    this.infoClose = new ButtonControl({ id: 'info-close', layout: { anchor: 'top-right' } }, this.bus);
 
     // bottom-bar controls
     this.bonusButton = new ButtonControl({ id: 'bonus', layout: { anchor: 'bottom-center', offset: [-400, -440] } }, this.bus);
@@ -219,9 +211,6 @@ export class OpenUI {
       this.settingsPanel,
       this.musicSlider,
       this.sfxSlider,
-      this.rulesButton,
-      this.infoPanel,
-      this.infoClose,
       this.bonusButton,
       this.autoplay,
       this.turbo,
@@ -246,12 +235,7 @@ export class OpenUI {
     // the library owns this navigation (a biased, stateful UI)
     this.bus.on('buttonActivated', ({ id }) => {
       if (id === 'settings') this.settingsPanel.toggle();
-      else if (id === 'rules') {
-        this.settingsPanel.closePanel();
-        this.infoPanel.openPanel();
-      } else if (id === 'info-close') {
-        this.infoPanel.closePanel();
-      } else if (id === 'bet-plus') {
+      else if (id === 'bet-plus') {
         this.betStepper.inc();
       } else if (id === 'bet-minus') {
         this.betStepper.dec();
@@ -478,27 +462,24 @@ export class OpenUI {
     this.translator.setLocale(next);
   }
 
-  /** Translate a key (or pass plain text through) via the active translator. In
-   *  social mode, a `<key>.social` variant wins when one resolves — so gambling
-   *  wording (Bet/Buy feature) swaps to sweepstakes terms automatically. */
+  /** Translate a key (or pass plain text through) via the active translator. Social
+   *  wording is resolved by the translator from a SEPARATE social dictionary (see
+   *  `setSocial`), so gambling and social copy can never be mixed by accident. */
   t(key: string, vars?: Record<string, string | number>): string {
-    if (this.social.get()) {
-      const sk = `${key}.social`;
-      const s = this.translator.t(sk, vars);
-      if (s !== sk) return s; // a social variant exists (the dict didn't fall through)
-    }
     return this.translator.t(key, vars);
   }
 
   /**
-   * Turn social / sweepstakes mode on or off (one switch). Swaps gambling wording
-   * (Bet/Buy feature → social terms via `<key>.social` i18n) AND, when a `coin` is
-   * given (e.g. `'GC'`/`'SC'`/`'XGC'`), shows balance/bet/net in that coin. Wording
-   * re-renders live; the host can still override any `.social` key.
+   * Turn social / sweepstakes mode on or off (one switch). Flips the translator to
+   * its SEPARATE social dictionary (Bet→Play, Buy feature→Play bonus, etc.) and,
+   * when a `coin` is given (e.g. `'GC'`/`'SC'`), shows balance/bet/net in that coin.
+   * Wording re-renders live. Social copy lives in `locale.socialMessages` — kept
+   * apart from your normal `locale.messages` by design.
    */
   setSocial(on: boolean, coin?: string): void {
     if (on !== this.social.get()) {
       this.social.set(on);
+      this.translator.setSocial?.(on);
       this.locale.update(() => {}); // nudge text views (they subscribe to `locale`) to re-translate
     }
     if (coin) {
@@ -511,13 +492,12 @@ export class OpenUI {
 
   /** Read-back: did the applied jurisdiction disable this feature? (real guard, not
    *  just a hide — `confirmBuy`/autoplay entry points consult this). */
-  isDisabled(feature: 'autoplay' | 'buyFeature' | 'turbo' | 'superTurbo' | 'fullscreen' | 'slamstop' | 'spacebar'): boolean {
+  isDisabled(feature: 'autoplay' | 'buyFeature' | 'turbo' | 'fullscreen' | 'slamstop' | 'spacebar'): boolean {
     const j = this.jurisdiction;
     return (
       (feature === 'autoplay' && !!j.disabledAutoplay) ||
       (feature === 'buyFeature' && !!j.disabledBuyFeature) ||
       (feature === 'turbo' && !!j.disabledTurbo) ||
-      (feature === 'superTurbo' && !!j.disabledSuperTurbo) ||
       (feature === 'fullscreen' && !!j.disabledFullscreen) ||
       (feature === 'slamstop' && !!j.disabledSlamstop) ||
       (feature === 'spacebar' && !!j.disabledSpacebar)
@@ -568,7 +548,7 @@ export class OpenUI {
     this.showNotice(
       [
         { kind: 'heading', id: 'rc-title', text: this.t(opts.title ?? 'openui.realityCheck.title', vars) },
-        { kind: 'callout', id: 'rc-body', tone: 'info', text: this.t(opts.message ?? 'openui.realityCheck.message', vars) },
+        { kind: 'text', id: 'rc-body', text: this.t(opts.message ?? 'openui.realityCheck.message', vars) },
       ],
       opts.actions ?? [{ label: 'openui.continue', variant: 'primary' }],
     );

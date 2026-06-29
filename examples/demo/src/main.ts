@@ -13,7 +13,7 @@ import { gsap } from 'gsap';
  * behaves like is set by a plain JSON UISpec, here read from the URL so the
  * Playwright suites can screenshot every permutation:
  *
- *   ?turbo=3&autoplay=infinite&spin=hold&currency=BTC&locale=ja&bare=1
+ *   ?autoplay=infinite&spin=hold&currency=BTC&locale=ja&bare=1
  *   ?accent=%23ff0000   (recolour the one b&w+yellow theme — a broken value can't break it)
  */
 
@@ -38,7 +38,6 @@ const cfg = {
   // open-ui ships ONE theme — black & white with a yellow accent. `?accent=` recolours it.
   theme: 'default' as ThemePreset,
   accent: q.get('accent') ?? undefined,
-  turbo: q.get('turbo') === '3' ? (3 as const) : (2 as const),
   autoplay: q.get('autoplay') === 'infinite' ? ('infinite' as const) : ('options' as const),
   spin: q.get('spin') === 'hold' ? ('hold-to-spin' as const) : ('tap' as const),
   currency: (q.get('currency') && CURRENCIES[q.get('currency')!] ? q.get('currency')! : 'USD'),
@@ -66,7 +65,6 @@ function parseJurisdiction(raw: string | null): JurisdictionConfig {
     displayNetPosition: f.has('net'),
     displaySessionTimer: f.has('timer'),
     disabledTurbo: f.has('noturbo'),
-    disabledSuperTurbo: f.has('nosuper'),
     disabledAutoplay: f.has('noauto'),
     disabledSlamstop: f.has('noslam'),
     disabledSpacebar: f.has('nohold'),
@@ -89,7 +87,10 @@ function buildSpec(): UISpec {
     },
     currency: cur.spec,
     betLadder: { levels: [0.5, 1, 2, 5, 10, 20], index: 1 },
-    turbo: { modes: cfg.turbo },
+    // Turbo is a 2-mode (off/on) toggle — the only supported mode for now.
+    turbo: { modes: 2 },
+    // Autoplay is host-configurable: the spin-count options always show; the two RG
+    // fields (stop-on-loss / stop-on-single-win) only appear when you pass them.
     autoplay: { mode: cfg.autoplay, options: [5, 10, 25, 50, 100, Infinity], lossLimits: [5, 10, 25, 50, Infinity], winLimits: [10, 25, 50, 100, Infinity] },
     spin: { press: cfg.spin },
     // Stake Engine compliance: an RTP figure + the jurisdiction switchboard (the demo
@@ -244,7 +245,6 @@ async function main(): Promise<void> {
       sliderSound: soundTrack,
       turboOff,
       turboOn,
-      // 3-mode turbo reuses the off/on art + the built-in level pips overlay
       autoIdle: autoFrames[0],
       autoActive: autoFrames[2],
       bonus: bonusTex,

@@ -192,7 +192,13 @@ export interface UISpec {
   /** Additional declarative panels. */
   panels?: PanelSpec[];
   /** i18n dictionary + starting locale (built into a DictionaryTranslator). */
-  locale?: { messages: Record<string, Record<string, string>>; locale: string };
+  locale?: {
+    messages: Record<string, Record<string, string>>;
+    locale: string;
+    /** SEPARATE social/sweepstakes wording dictionary (same keys as `messages`),
+     *  used only in social mode — kept apart so the two can't be mixed up. */
+    socialMessages?: Record<string, Record<string, string>>;
+  };
   /** Block/control id whose `optionSelected` switches the locale. Default 'lang'. */
   localeSelectId?: string;
   /** Auto-lock the whole HUD while the spin control is spinning. Default true. */

@@ -22,8 +22,8 @@ describe('jurisdiction switchboard', () => {
     expect(ui.hidden.has('turbo')).toBe(true);
   });
 
-  it('disabledSuperTurbo collapses a 3-mode switcher to a 2-mode toggle', () => {
-    const ui = createUI({ turbo: { modes: 3 }, jurisdiction: { disabledSuperTurbo: true } });
+  it('turbo is a 2-mode (off/on) toggle by default', () => {
+    const ui = createUI();
     expect(ui.turbo.modeCount).toBe(2);
   });
 

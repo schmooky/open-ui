@@ -22,7 +22,6 @@ export interface TurboViewOptions {
 export class TurboView extends ControlView {
   private readonly art = new Container();
   private readonly bg = new Graphics();
-  private readonly pips = new Graphics();
   private sprite: Sprite | undefined;
   private readonly tween: Tweener;
   private readonly modeTex: Texture[] | undefined;
@@ -48,7 +47,7 @@ export class TurboView extends ControlView {
     } else {
       this.art.addChild(this.bg);
     }
-    this.addChild(this.art, this.pips);
+    this.addChild(this.art);
 
     this.eventMode = 'static';
     this.cursor = 'pointer';
@@ -104,23 +103,6 @@ export class TurboView extends ControlView {
         .fill({ color: lit ? th.color.accentText : th.color.accent, alpha: disabled ? 0.5 : 1 });
     }
 
-    // Level pips (only meaningful for 3+ modes) — lit up to the current index.
-    this.pips.clear();
-    const steps = this.turbo.modeCount - 1;
-    if (steps >= 2) {
-      const baseR = this.sprite ? this.target / 2 : this.radius;
-      const gap = 16;
-      const total = (steps - 1) * gap;
-      const y = baseR + 14;
-      for (let s = 0; s < steps; s++) {
-        const x = -total / 2 + s * gap;
-        const on = s < i;
-        this.pips
-          .circle(x, y, 5)
-          .fill({ color: on ? th.color.accent : th.color.surface, alpha: disabled ? 0.5 : 1 })
-          .stroke({ width: 2, color: th.color.accent, alpha: disabled ? 0.5 : 1 });
-      }
-    }
   }
 
   private play(t: Transition | undefined): void {
