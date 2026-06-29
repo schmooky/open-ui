@@ -97,10 +97,12 @@ export const RGS_ERROR_KEYS: Readonly<Record<string, { title: string; message: s
 /** The default dismiss action used when a notice supplies none. */
 export const DEFAULT_NOTICE_ACTION: NoticeAction = { label: 'openui.ok', variant: 'primary' };
 
-/** Build the title + message blocks for an error/notice (used by `showError`). */
-export function errorBlocks(message: string, title: string, tone: NonNullable<NoticeOptions['tone']>): BlockSpec[] {
+/** Build the title + message blocks for an error/notice (used by `showError`).
+ *  The Figma "default" modal is plain: a heading + body text (no tinted callout).
+ *  `tone` is kept for API compatibility but no longer changes the rendering. */
+export function errorBlocks(message: string, title: string, _tone: NonNullable<NoticeOptions['tone']>): BlockSpec[] {
   return [
     { kind: 'heading', id: 'notice-title', text: title },
-    { kind: 'callout', id: 'notice-body', tone, text: message },
+    { kind: 'text', id: 'notice-body', text: message },
   ];
 }

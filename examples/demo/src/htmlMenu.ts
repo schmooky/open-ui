@@ -164,10 +164,6 @@ export function mountHtmlMenu(app: Application, hud: BootedHud): void {
         <div class="ohm-sec"><span data-t="Settings">${tr('Settings')}</span></div>
         <label class="ohm-row ohm-check"><span data-t="Sound">${tr('Sound')}</span>
           <span class="ohm-ctl"><input id="ohm-soundtoggle" type="checkbox" checked></span></label>
-        <label class="ohm-row"><span data-t="Music">${tr('Music')}</span>
-          <input id="ohm-music" type="range" min="0" max="100" value="70"></label>
-        <label class="ohm-row"><span data-t="Effects">${tr('Effects')}</span>
-          <input id="ohm-effects" type="range" min="0" max="100" value="50"></label>
         <label class="ohm-row"><span data-t="Language">${tr('Language')}</span>
           <select id="ohm-lang">${langOptions}</select></label>
         ${turboRow}
@@ -187,20 +183,14 @@ export function mountHtmlMenu(app: Application, hud: BootedHud): void {
   // ── wire controls to open-ui state ──────────────────────────────────────────
   const $ = <T extends Element>(sel: string): T => host.querySelector(sel) as T;
   const soundToggle = $<HTMLInputElement>('#ohm-soundtoggle');
-  const music = $<HTMLInputElement>('#ohm-music');
-  const effects = $<HTMLInputElement>('#ohm-effects');
   const lang = $<HTMLSelectElement>('#ohm-lang');
   const rulesEl = $<HTMLElement>('#ohm-rules');
-  music.value = String(Math.round(ui.musicSlider.value.get() * 100));
-  effects.value = String(Math.round(ui.sfxSlider.value.get() * 100));
-  music.addEventListener('input', () => ui.musicSlider.setNormalized(+music.value / 100));
-  effects.addEventListener('input', () => ui.sfxSlider.setNormalized(+effects.value / 100));
   lang.addEventListener('change', () => ui.setLocale(lang.value));
 
-  // Master Sound toggle: disables the Music/Effects sliders when off.
-  const applySound = (): void => { const on = soundToggle.checked; music.disabled = !on; effects.disabled = !on; };
-  soundToggle.addEventListener('change', applySound);
-  applySound();
+  // Master Sound toggle → drives the shared mute state (volume sliders are omitted).
+  soundToggle.checked = !ui.muted.get();
+  soundToggle.addEventListener('change', () => ui.setMuted(!soundToggle.checked));
+  ui.muted.subscribe((m) => { soundToggle.checked = !m; });
 
   // Turbo / quick-spin → drives ui.turbo (toggle for 2 modes, segmented for 3+).
   if (turbo.modeCount <= 2) {
@@ -245,7 +235,9 @@ const OHM_CSS = `
 .ohm-root { position: fixed; top: var(--ohm-top, 0); right: 0; bottom: var(--ohm-bottom, 0); left: 0; z-index: 10000; display: grid; place-items: center; font-family: var(--font); opacity: 0; pointer-events: none; transition: opacity .18s ease; }
 .ohm-root.open { opacity: 1; pointer-events: auto; }
 .ohm-incanvas { position: absolute; }
-.ohm-backdrop { position: absolute; inset: 0; background: rgba(8,6,4,.34); backdrop-filter: blur(6px) saturate(1.1); }
+/* Backdrop blur ANIMATES in (the filter radius ramps up), instead of snapping on. */
+.ohm-backdrop { position: absolute; inset: 0; background: rgba(8,6,4,0); backdrop-filter: blur(0px) saturate(1); -webkit-backdrop-filter: blur(0px) saturate(1); transition: background .4s ease, backdrop-filter .4s ease, -webkit-backdrop-filter .4s ease; }
+.ohm-root.open .ohm-backdrop { background: rgba(8,6,4,.34); backdrop-filter: blur(6px) saturate(1.1); -webkit-backdrop-filter: blur(6px) saturate(1.1); }
 .ohm-card { position: relative; width: min(92%, 1100px); max-height: 86vh; display: flex; flex-direction: column; background: var(--surface); color: var(--text); border: 1.5px solid #000; border-radius: var(--card-radius); box-shadow: 0 30px 80px rgba(0,0,0,.5); overflow: hidden; transform: translateY(8px) scale(.99); transition: transform .18s ease; }
 .ohm-root.open .ohm-card { transform: none; }
 .ohm-x { position: absolute; top: 18px; right: 22px; width: 46px; height: 46px; border-radius: 999px; border: 0; background: rgba(18,14,10,.82); color: #fff; font-size: 18px; cursor: pointer; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,.45); z-index: 2; transition: transform .12s, background .12s; }
@@ -260,18 +252,20 @@ const OHM_CSS = `
 .ohm-logo { display: block; margin: 6px auto 18px; max-width: 64%; height: auto; }
 .ohm-sec { display: flex; align-items: center; gap: 14px; margin: 26px 0 14px; color: var(--text); font-weight: 800; letter-spacing: 1px; }
 .ohm-sec::before, .ohm-sec::after { content: ""; flex: 1; height: 2px; background: color-mix(in srgb, var(--text) 80%, transparent); border-radius: 2px; }
+.ohm-root *, .ohm-root *::before, .ohm-root *::after { box-sizing: border-box; }
 .ohm-row { display: flex; align-items: center; gap: 16px; margin: 14px 0; font-weight: 700; }
-.ohm-row > span:first-child { min-width: 120px; }
+.ohm-row > span:first-child { flex: none; min-width: 110px; }
 /* inputs don't stretch full width — capped (dvw-based, with a px ceiling so they
-   never get giant on wide screens nor too small on phones). */
-.ohm-row input[type=range] { flex: 1; max-width: min(440px, 60dvw); accent-color: var(--accent); height: 6px; }
-.ohm-row select { flex: 1; max-width: min(440px, 60dvw); padding: 11px 14px; border-radius: 4px; border: 2px solid var(--accent); background: var(--surface-alt); color: var(--text); font-weight: 700; font-size: 15px; cursor: pointer; }
+   never get giant on wide screens nor too small on phones). min-width:0 lets the
+   flex item shrink below its content so it never overflows a narrow card. */
+.ohm-row input[type=range] { flex: 1; min-width: 0; max-width: min(440px, 60dvw); accent-color: var(--accent); height: 6px; }
+.ohm-row select { flex: 1; min-width: 0; max-width: min(440px, 60dvw); padding: 11px 14px; border-radius: 4px; border: 2px solid var(--accent); background: var(--surface-alt); color: var(--text); font-weight: 700; font-size: 15px; cursor: pointer; }
 /* the open dropdown list reads differently from the closed pill: white options, accent-highlighted selection */
 .ohm-row select option { background: var(--surface); color: var(--text); font-weight: 600; }
 .ohm-row select option:checked { background: var(--accent); color: var(--accent-text); }
 /* toggles/segmented sit in the same capped column as the sliders/select, right-
    aligned, so their right edge lines up with the inputs' right border. */
-.ohm-ctl { flex: 1; max-width: min(440px, 60dvw); display: flex; align-items: center; justify-content: flex-end; }
+.ohm-ctl { flex: 1; min-width: 0; max-width: min(440px, 60dvw); display: flex; align-items: center; justify-content: flex-end; }
 .ohm-check input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 50px; height: 28px; border-radius: 999px; background: color-mix(in srgb, var(--text-dim) 38%, transparent); position: relative; cursor: pointer; transition: background .15s; flex: none; }
 .ohm-check input[type=checkbox]:checked { background: var(--accent); }
 .ohm-check input[type=checkbox]::before { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 999px; background: #fff; transition: left .15s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }

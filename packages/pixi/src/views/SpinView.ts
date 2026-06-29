@@ -30,6 +30,11 @@ export class SpinView extends ControlView {
   private readonly fsFace = new Container();
   private readonly fsCount: Text;
   private readonly fsLabel: Text;
+  /** Autoplay STOP face — a "STOP" label over the remaining count (or ∞); shown while
+   *  autoplay is active. Tapping the spin button then STOPS autoplay. */
+  private readonly stopFace = new Container();
+  private readonly stopCount: Text;
+  private readonly stopLabel: Text;
 
   constructor(
     private readonly spin: SpinControl,
@@ -61,6 +66,19 @@ export class SpinView extends ControlView {
     this.fsFace.visible = false;
     this.art.addChild(this.fsFace);
 
+    // Autoplay STOP face: a white button with a "STOP" label over the big remaining
+    // count (or ∞). Built once, shown while autoplay is active.
+    const stopRing = new Graphics().circle(0, 0, 96).fill({ color: 0xffffff }).stroke({ width: 7, color: 0x0a0a0a });
+    this.stopLabel = new Text({ text: ui.t('openui.stop') === 'openui.stop' ? 'STOP' : ui.t('openui.stop'), style: { fontFamily: ui.theme.type.family, fontSize: 26, fill: 0x0a0a0a, fontWeight: '900', letterSpacing: 3 } });
+    this.stopLabel.anchor.set(0.5);
+    this.stopLabel.y = -38;
+    this.stopCount = new Text({ text: '0', style: { fontFamily: ui.theme.type.family, fontSize: 64, fill: 0x0a0a0a, fontWeight: '900' } });
+    this.stopCount.anchor.set(0.5);
+    this.stopCount.y = 16;
+    this.stopFace.addChild(stopRing, this.stopLabel, this.stopCount);
+    this.stopFace.visible = false;
+    this.art.addChild(this.stopFace);
+
     this.addChild(this.art);
 
     this.hitArea = new Circle(0, 0, 118);
@@ -82,24 +100,37 @@ export class SpinView extends ControlView {
       this.spin.allowSlamStop.subscribe(() => this.updateInteractive()),
       this.spin.onTransition((t) => this.play(t)),
       // free-spins face: switch between the normal skin and the "N FS" counter
-      this.spin.freeSpins.subscribe(() => this.updateFreeSpins()),
+      this.spin.freeSpins.subscribe(() => this.updateFaces()),
+      // autoplay: while active the spin button becomes the STOP-count button
+      this.ui.autoplay.state.subscribe(() => {
+        this.updateFaces();
+        this.updateInteractive();
+      }),
+      this.ui.autoplay.count.subscribe(() => this.updateFaces()),
       this.ui.locale.subscribe(() => {
         if (!this.destroyed) this.fsLabel.text = this.ui.t('openui.freeSpins');
       }),
     );
 
     this.skin.update(this.spin.current);
-    this.updateFreeSpins();
+    this.updateFaces();
     this.updateInteractive();
   }
 
-  /** Swap the spin face: free-spins counter when `freeSpins > 0`, else the skin. */
-  private updateFreeSpins(): void {
+  /** Pick the spin face: autoplay STOP-count (top priority) → free-spins counter →
+   *  the normal skin. */
+  private updateFaces(): void {
+    const auto = this.ui.autoplay.isActive;
     const n = this.spin.freeSpins.get();
-    const fs = n > 0;
-    this.fsCount.text = String(n);
+    const fs = n > 0 && !auto;
+    if (auto) {
+      const c = this.ui.autoplay.count.get();
+      this.stopCount.text = c === Infinity ? '∞' : String(c);
+    }
+    if (fs) this.fsCount.text = String(n);
+    this.stopFace.visible = auto;
     this.fsFace.visible = fs;
-    this.skin.view.visible = !fs;
+    this.skin.view.visible = !auto && !fs;
   }
 
   private readonly onOver = (): void => {
@@ -128,6 +159,11 @@ export class SpinView extends ControlView {
   private readonly onUp = (): void => {
     if (this.holding) return this.endHold();
     this.clearHoldTimer();
+    // While autoplay is running the spin button is the STOP button → tap stops it.
+    if (this.ui.autoplay.isActive) {
+      this.ui.autoplay.stop();
+      return;
+    }
     if (this.spin.current === 'pressed') {
       this.spin.setState('idle');
       this.spin.activate();
@@ -158,7 +194,9 @@ export class SpinView extends ControlView {
   }
 
   private updateInteractive(): void {
-    const ok = this.spin.interactable;
+    // Stay tappable while autoplay is active (the STOP button) even though the spin
+    // control itself is locked mid-round.
+    const ok = this.spin.interactable || this.ui.autoplay.isActive;
     this.eventMode = ok ? 'static' : 'none';
     this.cursor = ok ? 'pointer' : 'default';
     // When slam-stop is disabled (jurisdiction), dim the button while a spin is in

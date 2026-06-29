@@ -17,7 +17,6 @@ import { gsap } from 'gsap';
  *   ?accent=%23ff0000   (recolour the one b&w+yellow theme — a broken value can't break it)
  */
 
-const legendEl = document.getElementById('legend') as HTMLDivElement;
 const q = new URLSearchParams(location.search);
 if (q.get('bare') === '1') document.body.classList.add('bare');
 
@@ -47,8 +46,9 @@ const cfg = {
   // buy-feature: ?activation=single|multi (default multi) · ?blockbuy=1
   activation: (q.get('activation') === 'single' ? 'single' : 'multi') as 'single' | 'multi',
   blockBuy: q.get('blockbuy') === '1',
-  // status bar edge for the compliance readouts: ?statusbar=top|bottom|off (default top)
-  statusBar: (q.get('statusbar') === 'bottom' ? 'bottom' : q.get('statusbar') === 'off' ? undefined : 'top') as 'top' | 'bottom' | undefined,
+  // Compliance readouts default to the Figma top-left `Label: value` block; opt into
+  // the thin status bar with ?statusbar=top|bottom.
+  statusBar: (q.get('statusbar') === 'bottom' ? 'bottom' : q.get('statusbar') === 'top' ? 'top' : undefined) as 'top' | 'bottom' | undefined,
   // reality-check interval in minutes (?reality=0.2 ≈ 12s, for demoing); replay mode
   reality: Number(q.get('reality')) || 0,
   replay: q.get('replay') === '1',
@@ -84,8 +84,12 @@ const JURISDICTION = parseJurisdiction(q.get('juris'));
 function buildSpec(): UISpec {
   const cur = CURRENCIES[cfg.currency]!;
   return {
-    // A bad ?accent is sanitized away (the preset accent shows through) — never broken.
-    theme: cfg.accent ? { preset: cfg.theme, overrides: { color: { accent: cfg.accent } } } : cfg.theme,
+    // The Figma "default" look is set in Montserrat (Black for the HUD figures). A bad
+    // ?accent is sanitized away (the preset accent shows through) — never broken.
+    theme: {
+      preset: cfg.theme,
+      overrides: { type: { family: '"Montserrat", system-ui, sans-serif' }, ...(cfg.accent ? { color: { accent: cfg.accent } } : {}) },
+    },
     currency: cur.spec,
     betLadder: { levels: [0.5, 1, 2, 5, 10, 20], index: 1 },
     turbo: { modes: cfg.turbo },
@@ -103,18 +107,19 @@ function buildSpec(): UISpec {
     // bonus on the right rail and the ☰ menu on the lower left. The design has no
     // tilted buttons (rotation 0), but LayoutSpec.rotation now supports it. (Portrait
     // reflows below; audio/rules live in the ☰ menu, not on a left rail.)
+    // Positions cloned 1:1 from the Figma "Desk DEF" frame (1920×1080 = our landscape
+    // reference, so the px map directly). Balance/Bet labels are tilted ∓5° like the
+    // design; the ☰ menu shares the −5° tilt.
     controls: {
-      spin: { layout: { anchor: 'bottom-center', offset: [0, -150], scale: 1.25, rotation: 0 } },
-      autoplay: { layout: { anchor: 'bottom-center', offset: [-240, -140] } },
-      turbo: { layout: { anchor: 'bottom-center', offset: [240, -140] } },
-      // balance + bet read large — the two figures the player checks most (scale 1.35).
-      balance: { layout: { anchor: 'bottom-left', offset: [205, -64], scale: 1.35 } },
-      bet: { layout: { anchor: 'bottom-right', offset: [-345, -64], scale: 1.35 } },
-      'bet-plus': { layout: { anchor: 'bottom-right', offset: [-118, -92] } },
-      'bet-minus': { layout: { anchor: 'bottom-right', offset: [-118, -40] } },
-      // bonus (buy) on the right rail + ☰ menu on the lower left, both lifted a little.
-      bonus: { layout: { anchor: 'bottom-right', offset: [-208, -258] } },
-      settings: { layout: { anchor: 'bottom-left', offset: [95, -182] } },
+      spin: { layout: { anchor: 'bottom-center', offset: [0, -140], scale: 0.9, rotation: 0 } },
+      autoplay: { layout: { anchor: 'bottom-center', offset: [-204, -112] } },
+      turbo: { layout: { anchor: 'bottom-center', offset: [204, -112] } },
+      balance: { layout: { anchor: 'bottom-left', offset: [135, -104], rotation: -5 } },
+      bet: { layout: { anchor: 'bottom-right', offset: [-186, -104], rotation: 5 } },
+      'bet-plus': { layout: { anchor: 'bottom-right', offset: [-120, -188], rotation: 5 } },
+      'bet-minus': { layout: { anchor: 'bottom-right', offset: [-120, -104], rotation: 5 } },
+      bonus: { layout: { anchor: 'bottom-center', offset: [740, -320] } },
+      settings: { layout: { anchor: 'bottom-center', offset: [-740, -320], rotation: -5 } },
     },
     // The unified ☰ menu — every part is a modular, configurable BLOCK: a banner
     // image, a divider+settings, a multiplier paytable with symbol icons, and rules
@@ -151,17 +156,29 @@ function buildSpec(): UISpec {
     // out to the screen sides); the bet steppers tuck directly below SPIN; the buy
     // (bonus) + ☰ menu sit on the row above. The buy button is NEVER hidden.
     responsive: {
+      // Cloned 1:1 from the Figma "Mobile DEF" frame (360-wide → ×3 to our 1080
+      // portrait reference). Row: buy · play · SPIN · turbo · ☰ menu; the bet ±
+      // steppers sit centred below SPIN; balance/bet are tilted ∓5° in the corners.
       portrait: {
         controls: {
-          spin: { layout: { anchor: 'bottom-center', offset: [0, -300], scale: 1.15 } },
-          autoplay: { layout: { anchor: 'bottom-center', offset: [-370, -300] } },
-          turbo: { layout: { anchor: 'bottom-center', offset: [370, -300] } },
-          'bet-minus': { layout: { anchor: 'bottom-center', offset: [-95, -140] } },
-          'bet-plus': { layout: { anchor: 'bottom-center', offset: [95, -140] } },
-          bonus: { layout: { anchor: 'bottom-center', offset: [-300, -490] } },
-          settings: { layout: { anchor: 'bottom-center', offset: [300, -490] } },
-          balance: { layout: { anchor: 'bottom-left', offset: [215, -56], scale: 1.25 } },
-          bet: { layout: { anchor: 'bottom-right', offset: [-215, -56], scale: 1.25 } },
+          // Mobile sizes run ~1.5× the desktop base (the Figma mobile frame draws the
+          // controls larger relative to its width), so the buttons read well on a phone.
+          spin: { layout: { anchor: 'bottom-center', offset: [0, -510], scale: 1.35 } },
+          autoplay: { layout: { anchor: 'bottom-center', offset: [-258, -510], scale: 1.5 } },
+          turbo: { layout: { anchor: 'bottom-center', offset: [258, -510], scale: 1.5 } },
+          bonus: { layout: { anchor: 'bottom-center', offset: [-438, -480], scale: 1.3 } },
+          settings: { layout: { anchor: 'bottom-center', offset: [438, -480], scale: 1.5, rotation: -5 } },
+          'bet-minus': { layout: { anchor: 'bottom-center', offset: [-105, -267], scale: 1.5 } },
+          'bet-plus': { layout: { anchor: 'bottom-center', offset: [105, -267], scale: 1.5 } },
+          mute: { layout: { anchor: 'top-right', offset: [-159, 57], scale: 1.5 } },
+          fullscreen: { layout: { anchor: 'top-right', offset: [-57, 57], scale: 1.5 } },
+          // Compliance readouts scale up ~2× on mobile (Figma draws them larger
+          // relative to the narrow frame) with wider line spacing so they don't crowd.
+          rtp: { layout: { anchor: 'top-left', offset: [14, 14], scale: 2 } },
+          'session-timer': { layout: { anchor: 'top-left', offset: [14, 44], scale: 2 } },
+          'net-position': { layout: { anchor: 'top-left', offset: [14, 80], scale: 2 } },
+          balance: { layout: { anchor: 'bottom-left', offset: [36, -110], scale: 1.0, rotation: -5 } },
+          bet: { layout: { anchor: 'bottom-right', offset: [-36, -110], scale: 1.0, rotation: 5 } },
         },
       },
     },
@@ -179,6 +196,15 @@ async function main(): Promise<void> {
   });
   document.body.appendChild(app.canvas);
   app.canvas.style.outline = 'none';
+
+  // Make sure the Montserrat faces are loaded before any Pixi Text is measured, so the
+  // balance/bet odometer + labels + readouts get correct glyph metrics from the start.
+  if (document.fonts?.load) {
+    await Promise.all([
+      document.fonts.load('400 12px "Montserrat"'),
+      document.fonts.load('900 48px "Montserrat"'),
+    ]).catch(() => undefined);
+  }
 
   const reels = buildReels();
   app.stage.addChild(reels.container);
@@ -210,6 +236,7 @@ async function main(): Promise<void> {
     expose: true,
     gsap, // enables the value counter's auto-downscale for wide currencies
     menu: false, // the one biased menu design is the HTML one, mounted below
+
     intro: cfg.intro, // ?intro=shown|hidden|slide-in
 
     spinSkin: () => svgSpinSkin({ default: spinDefault, auto: spinAuto }),
@@ -316,30 +343,8 @@ async function main(): Promise<void> {
     holding = false;
   });
 
-  // ---- a few keyboard conveniences (the demo, not the library) ----
-  let controlsShown = true;
-  window.addEventListener('keydown', (e) => {
-    const k = e.key.toLowerCase();
-    if (k === 'a') ui.spin.current === 'auto' ? ui.spin.idle() : ui.spin.auto();
-    else if (k === '+' || k === '=') ui.betStepper.inc();
-    else if (k === '-') ui.betStepper.dec();
-    else if (k === 't') ui.turbo.cycle();
-    else if (k === '2') ui.turbo.setModes(['off', 'on']);
-    else if (k === '3') ui.turbo.setModes(['off', 'turbo', 'super']);
-    else if (k === 'm') ui.toggleMute();
-    else if (k === 'e')
-      hud.showError('A consistent internet connection is required. Reload to finish any uncompleted bets.', {
-        title: 'Connection lost',
-        actions: [
-          { label: 'openui.reload', variant: 'primary', onSelect: () => location.reload() },
-          { label: 'openui.ok', variant: 'secondary' },
-        ],
-      });
-    else if (k === 'h') {
-      controlsShown = !controlsShown;
-      hud.setControlsVisible(controlsShown); // slide the whole interactive HUD in/out
-    }
-  });
+  // Spin via Spacebar/Enter is handled inside the library (the only keyboard input);
+  // the demo registers no extra key shortcuts.
 
   (window as unknown as Record<string, unknown>).ui = ui;
 
@@ -360,24 +365,6 @@ async function main(): Promise<void> {
   layoutReels();
   setMenuInset();
 
-  // ---- tiny legend (host chrome, not part of open-ui) ----
-  const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFractionDigits: 8 });
-  const drawLegend = (): void => {
-    if (document.body.classList.contains('bare')) return;
-    const s = ui.screen.get();
-    const code = ui.balance.currency.get().code;
-    legendEl.innerHTML =
-      `<b>open-ui</b> · example client\n` +
-      `theme   <span class="k">${String(cfg.theme)}</span>\n` +
-      `turbo   <span class="k">${ui.turbo.modeCount}-mode</span> · <span class="k">${ui.turbo.mode}</span>\n` +
-      `auto    <span class="k">${ui.autoplay.mode}</span>\n` +
-      `spin    <span class="k">${cfg.spin}</span>\n` +
-      `locale  <span class="k">${ui.locale.get()}</span>\n` +
-      `screen  <span class="k">${s.breakpoint}/${s.orientation}</span>\n` +
-      `balance <span class="k">${fmt(ui.balance.get())} ${code}</span>\n` +
-      `<span class="d">keys: A auto · ± bet · T turbo · 2/3 modes</span>`;
-  };
-  app.ticker.add(drawLegend);
 }
 
 /** A throwaway placeholder "game": a 5×3 grid that shuffles while spinning. */

@@ -4,30 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>open-ui · example client</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
       html, body {
         margin: 0; height: 100%; overflow: hidden; font-family: system-ui, sans-serif;
+        /* Light grey stage so the HUD's shading, drop shadows and black pills read. */
         background:
-          radial-gradient(120% 85% at 50% -8%, rgba(224,170,70,.35), rgba(0,0,0,0) 52%),
-          radial-gradient(140% 120% at 50% 120%, rgba(48,34,16,.65), rgba(0,0,0,0) 60%),
-          linear-gradient(180deg, #17120b 0%, #0c0906 60%, #080604 100%);
+          radial-gradient(120% 90% at 50% -10%, #f2f3f5, rgba(0,0,0,0) 55%),
+          linear-gradient(180deg, #dcdee2 0%, #c9ccd2 60%, #babdc4 100%);
       }
       canvas { display: block; }
-      #legend {
-        position: fixed; left: 12px; top: 12px; z-index: 10;
-        color: #9aa4b2; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: rgba(0,0,0,0.5); padding: 10px 13px; border-radius: 10px;
-        white-space: pre; pointer-events: none; min-width: 230px;
-        backdrop-filter: blur(3px);
-      }
-      #legend b { color: #ffc935; }
-      #legend .k { color: #5fd0a0; }
-      #legend .d { color: #6b7280; }
-      body.bare #legend { display: none; }
     </style>
   </head>
   <body>
-    <div id="legend"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

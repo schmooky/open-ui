@@ -177,27 +177,37 @@ export class AutoplayView extends ControlView {
 
   private drawButton(): void {
     const st = this.auto.current;
-    this.countText.visible = st === 'active';
-    if (st === 'active') this.countText.text = this.fmt(this.auto.count.get());
+    // The count now lives on the SPIN button (the STOP-N button). This button never
+    // shows a number.
+    this.countText.visible = false;
+    const th = this.ui.theme;
+    const r = this.sprite ? this.target / 2 : this.radius;
 
-    if (st === 'active') {
-      // STOP shape: a rounded square with the count inside
-      if (this.sprite) this.sprite.visible = false;
-      const r = this.sprite ? this.target / 2 : this.radius;
-      this.bg.clear();
-      this.bg.roundRect(-r, -r, 2 * r, 2 * r, r * 0.35).fill({ color: this.ui.theme.color.accent }).stroke({ width: 4, color: this.ui.theme.color.accentText });
+    // While autoplay runs, this button is just a YELLOW, DISABLED indicator — the
+    // spin button becomes STOP-N and is what stops autoplay. Non-interactive here.
+    const active = st === 'active';
+    this.eventMode = active ? 'none' : 'static';
+    this.cursor = active ? 'default' : 'pointer';
+
+    if (active) {
+      this.bg.clear().circle(0, 0, r).fill({ color: th.color.accent }).stroke({ width: 4, color: th.color.accentText });
+      if (this.sprite) {
+        this.sprite.visible = true;
+        this.sprite.tint = th.color.accentText; // dark glyph on the yellow disc
+        this.sprite.alpha = 0.55; // reads as disabled
+      }
       return;
     }
 
     if (this.sprite) {
       this.sprite.visible = true;
+      this.sprite.tint = 0xffffff;
       this.bg.clear();
       const tex = this.idleTex ?? this.activeTex;
       if (tex) this.sprite.texture = tex;
       this.fit();
       this.sprite.alpha = st === 'disabled' ? 0.5 : 1;
     } else {
-      const th = this.ui.theme;
       this.bg.clear();
       this.bg.circle(0, 0, this.radius).fill({ color: th.color.surface }).stroke({ width: 4, color: th.color.accent });
     }

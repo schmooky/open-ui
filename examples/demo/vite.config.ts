@@ -13,8 +13,8 @@ const fromRoot = (p: string): string => new URL(p, root).pathname;
 export default defineConfig({
   resolve: {
     alias: [
-      { find: /^@open-ui\/core$/, replacement: fromRoot('packages/core/src/index.ts') },
-      { find: /^@open-ui\/pixi$/, replacement: fromRoot('packages/pixi/src/index.ts') },
+      { find: /^@open-slot-ui\/core$/, replacement: fromRoot('packages/core/src/index.ts') },
+      { find: /^@open-slot-ui\/pixi$/, replacement: fromRoot('packages/pixi/src/index.ts') },
       { find: /^pixi-text-counter$/, replacement: fromRoot('packages/pixi-text-counter/src/index.ts') },
     ],
     dedupe: ['pixi.js'],
